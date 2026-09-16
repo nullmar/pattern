@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pattern — Create From Image</title>
+<style>
+  :root{
+    --bg:#2b2b2b; --panel:#383838; --panel2:#454545; --border:#1e1e1e;
+    --text:#e8e8e8; --muted:#9a9a9a; --accent:#2d6cdf;
+  }
+  * { box-sizing:border-box; }
+  body {
+    background:var(--bg); color:var(--text);
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    margin:0; padding:0; overflow:hidden;
+    height:100vh;
+  }
+
+  #dropOverlay {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(45,108,223,0.25);
+    border:4px dashed var(--accent);
+    z-index:9999;
+    display:none;
+    align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  #dropOverlay.visible { display:flex; }
+  #dropOverlay .msg {
+    background:rgba(0,0,0,0.8); color:#fff;
+    padding:24px 40px; border-radius:8px;
+    font-size:20px; font-weight:600;
+  }
+
+  .content {
+    height:100vh; display:grid;
+    grid-template-columns: 1fr 340px;
+    overflow:hidden;
+  }
+
+  .center-col {
+    background:#1a1a1a;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; padding:16px;
+    position:relative;
+  }
+  .center-col canvas {
+    max-width:100%; max-height:100%;
+    display:block; background:#000;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  }
+
+  .right-col {
+    background:var(--panel); border-left:1px solid var(--border);
+    overflow-y:auto; display:flex; flex-direction:column;
+    height:100vh;
+  }
+  .section {
+    padding:12px 16px; border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .section .section-title {
+    display:flex; align-items:center; gap:6px;
+    font-size:11px; color:var(--muted); text-transform:uppercase;
+    letter-spacing:0.5px; margin-bottom:10px;
+    cursor:pointer; user-select:none;
+  }
+  .section .section-title::before {
+    content:'▾'; font-size:10px; transition:transform 0.15s;
+  }
+  .section.collapsed .section-title::before { transform:rotate(-90deg); }
+  .section.collapsed .section-body { display:none; }
+
+  .section-body { display:flex; flex-direction:column; gap:10px; }
+
+  .hint {
+    color:var(--muted); font-size:11px; line-height:1.4;
+    margin-top:6px;
+  }
+
+  .hint-icon {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:14px; height:14px; border-radius:50%;
+    background:var(--panel2); color:var(--muted);
+    font-size:9px; font-weight:600; cursor:help;
+    margin-left:4px; user-select:none;
+  }
+  .hint-icon:hover { background:var(--accent); color:#fff; }
+
+  #tooltip {
+    position:fixed;
+    background:#0a0a0a; color:#e8e8e8;
+    padding:8px 12px; border-radius:4px;
+    font-size:11px; line-height:1.4;
+    max-width:260px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.7);
+    border: 1px solid #333;
+    z-index: 99999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+  #tooltip.visible { opacity: 1; }
+  #tooltip::before {
+    content:''; position:absolute;
+    top:-6px; left:50%; transform:translateX(-50%);
+    border:5px solid transparent;
+    border-bottom-color:#0a0a0a;
+  }
+  #tooltip.bottom::before {
+    top:auto; bottom:-6px;
+    border-bottom-color:transparent;
+    border-top-color:#0a0a0a;
+  }
+
+  .file-btn {
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); border-radius:4px;
+    padding:10px 12px; cursor:pointer;
+    font-size:12px; width:100%;
+    transition: border-color 0.15s;
+  }
+  .file-btn:hover { border-color:var(--accent); }
+  .file-btn .file-icon { font-size:16px; }
+  .file-btn .file-name {
+    color:var(--muted); font-size:11px; margin-left:auto;
+    max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  .action-row {
+    display:flex; gap:6px;
+  }
+  .action-row button {
+    flex:1;
+    background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); border-radius:4px;
+    padding:8px 6px; font-size:11px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:4px;
+    transition: border-color 0.15s;
+  }
+  .action-row button:hover { border-color:var(--accent); }
+  .action-row button .icon { font-size:13px; }
+
+  .pattern-row {
+    display:flex; gap:6px; justify-content:space-between;
+  }
+  .pattern-btn {
+    flex:1; aspect-ratio:1;
+    background:var(--panel2); border:1px solid var(--border);
+    border-radius:4px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--muted); transition: all 0.15s;
+    max-width:44px;
+  }
+  .pattern-btn:hover { color:var(--text); border-color:#666; }
+  .pattern-btn.active {
+    background:var(--accent); color:#fff; border-color:var(--accent);
+  }
+  .pattern-btn svg { display:block; }
+  .pattern-btn svg path,
+  .pattern-btn svg polygon,
+  .pattern-btn svg line,
+  .pattern-btn svg rect {
+    stroke:currentColor; fill:none; stroke-width:1.5;
+  }
+
+  .field-row {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:8px;
+  }
+  .field-row label {
+    font-size:12px; color:var(--text);
+    display:flex; align-items:center;
+  }
+  .field-row .val {
+    font-size:11px; color:var(--muted);
+    font-variant-numeric:tabular-nums;
+  }
+  input[type=range] {
+    width:100%; accent-color:var(--accent); margin:0;
+  }
+  select {
+    background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); border-radius:4px;
+    padding:6px 8px; font-size:12px; width:100%;
+    cursor:pointer;
+  }
+  select:hover { border-color:#666; }
+
+  .thumb-row {
+    display:flex; gap:10px; align-items:center;
+  }
+  .thumb-box {
+    width:64px; height:64px; border:2px solid var(--accent);
+    border-radius:4px; overflow:hidden; flex-shrink:0;
+    background:#000;
+  }
+  .thumb-box canvas {
+    width:100%; height:100%; display:block;
+  }
+
+  .source-preview canvas {
+    width:100%; aspect-ratio:1;
+    background:#0a0a0a; border:1px solid var(--border);
+    border-radius:4px; display:block; cursor:grab;
+    touch-action: none;
+  }
+  .source-preview canvas:active { cursor:grabbing; }
+
+  .reset-btn {
+    margin-top:10px;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); border-radius:4px;
+    padding:8px 12px; font-size:12px; cursor:pointer;
+    width:100%;
+    transition: border-color 0.15s;
+  }
+  .reset-btn:hover { border-color:var(--accent); }
+  .reset-btn .icon { font-size:14px; }
+
+  .source-hint {
+    display:flex; align-items:center; gap:6px;
+    color:var(--muted); font-size:11px;
+    margin-top:8px; padding:6px 8px;
+    background:#2a2a2a; border-radius:4px;
+    border-left:2px solid var(--accent);
+  }
+  .source-hint .icon {
+    font-size:14px; color:var(--accent);
+  }
+
+  .palette-row {
+    display:flex; gap:6px; flex-wrap:wrap;
+    margin-top:8px;
+  }
+  .palette-swatch {
+    width:36px; height:36px;
+    border:2px solid var(--border); border-radius:4px;
+    cursor:pointer; transition: transform 0.1s;
+  }
+  .palette-swatch:hover {
+    transform: scale(1.1);
+    border-color:var(--accent);
+  }
+
+  .export-block {
+    margin-top:auto;
+    border-top:2px solid var(--accent);
+    background:#2f2f2f;
+    flex-shrink:0;
+  }
+
+  .bottom-actions {
+    padding:12px 16px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .bottom-actions button {
+    width:100%; padding:10px 12px; border-radius:4px;
+    font-size:12px; cursor:pointer; border:none;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .bottom-actions .save {
+    background:var(--accent); color:#fff; font-weight:600;
+  }
+  .bottom-actions .save:hover { filter:brightness(1.1); }
+  .bottom-actions .copy {
+    background:var(--panel2); color:var(--text);
+    border:1px solid var(--border);
+  }
+  .bottom-actions .copy:hover { border-color:var(--accent); }
+  .bottom-actions .icon { font-size:14px; }
+
+  input[type=file] { display:none; }
+
+  .file-info {
+    font-size:10px; color:var(--muted); padding:8px 16px;
+    text-overflow:ellipsis; overflow:hidden; white-space:nowrap;
+    border-bottom:1px solid var(--border);
+  }
+
+  .right-col::-webkit-scrollbar { width:8px; }
+  .right-col::-webkit-scrollbar-track { background:var(--panel); }
+  .right-col::-webkit-scrollbar-thumb {
+    background:var(--panel2); border-radius:4px;
+  }
+  .right-col::-webkit-scrollbar-thumb:hover { background:#555; }
+
+  #toast {
+    position:fixed; bottom:30px; left:50%;
+    transform:translateX(-50%) translateY(100px);
+    background:#0a0a0a; color:#fff;
+    padding:10px 20px; border-radius:6px;
+    font-size:13px; font-weight:600;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    border:1px solid var(--accent);
+    z-index: 99998;
+    opacity: 0; transition: all 0.3s;
+    pointer-events:none;
+  }
+  #toast.visible {
+    opacity: 1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 700px) {
+    .content {
+      grid-template-columns: 1fr;
+      grid-template-rows: 45vh 55vh;
+      height:100vh;
+    }
+    .center-col {
+      padding:8px;
+    }
+    .right-col {
+      border-left:none;
+      border-top:1px solid var(--border);
+      height:55vh;
+    }
+    .thumb-box { width:48px; height:48px; }
+    .thumb-box canvas { width:48px; height:48px; }
+    .source-preview canvas { touch-action: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="dropOverlay">
+  <div class="msg">📁 Drop your image here</div>
+</div>
+
+<div id="toast"></div>
+
+<div class="content">
+
+  <div class="center-col">
+    <canvas id="patternCanvas" width="900" height="900"></canvas>
+  </div>
+
+  <div class="right-col">
+
+    <div class="section">
+      <div class="section-title">File</div>
+      <div class="section-body">
+        <button class="file-btn" id="fileBtn">
+          <span class="file-icon">📁</span>
+          <span>Choose File</span>
+          <span class="file-name" id="fileLabel">not selected</span>
+        </button>
+        <div class="action-row">
+          <button id="randomBtn" title="Random settings">
+            <span class="icon">🎲</span>
+            <span>Random</span>
+          </button>
+          <button id="pasteBtn" title="Paste from clipboard">
+            <span class="icon">📋</span>
+            <span>Paste</span>
+          </button>
+        </div>
+        <div class="hint">Drag & drop a file anywhere, or press Ctrl+V to paste</div>
+        <div class="thumb-row" style="margin-top:8px;">
+          <div class="thumb-box">
+            <canvas id="thumbCanvas" width="64" height="64"></canvas>
+          </div>
+          <div style="font-size:11px; color:var(--muted);">
+            Current tile
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        Pattern
+        <span class="hint-icon" data-tip="Symmetry type. Hexagon — 6 wedges (like a snowflake). Hexagon 12 — 12 wedges (finer). Square-Rhombus — 8 wedges in a square. Mirror — image flipped in a 2×2 grid. Grid — plain tiling without mirrors.">?</span>
+      </div>
+      <div class="section-body">
+        <div class="pattern-row">
+          <div class="pattern-btn active" data-mode="hexagon">
+            <svg width="22" height="22" viewBox="0 0 28 28">
+              <polygon points="14,3 23,8.5 23,19.5 14,25 5,19.5 5,8.5"/>
+              <line x1="14" y1="14" x2="14" y2="3"/>
+              <line x1="14" y1="14" x2="23" y2="8.5"/>
+              <line x1="14" y1="14" x2="23" y2="19.5"/>
+              <line x1="14" y1="14" x2="14" y2="25"/>
+              <line x1="14" y1="14" x2="5" y2="19.5"/>
+              <line x1="14" y1="14" x2="5" y2="8.5"/>
+            </svg>
+          </div>
+          <div class="pattern-btn" data-mode="hexagon12">
+            <svg width="22" height="22" viewBox="0 0 28 28">
+              <polygon points="14,3 23,8.5 23,19.5 14,25 5,19.5 5,8.5"/>
+              <line x1="14" y1="14" x2="14" y2="3"/>
+              <line x1="14" y1="14" x2="23" y2="8.5"/>
+              <line x1="14" y1="14" x2="23" y2="19.5"/>
+              <line x1="14" y1="14" x2="14" y2="25"/>
+              <line x1="14" y1="14" x2="5" y2="19.5"/>
+              <line x1="14" y1="14" x2="5" y2="8.5"/>
+              <line x1="14" y1="14" x2="18.5" y2="5.75"/>
+              <line x1="14" y1="14" x2="23" y2="14"/>
+              <line x1="14" y1="14" x2="18.5" y2="22.25"/>
+              <line x1="14" y1="14" x2="9.5" y2="22.25"/>
+              <line x1="14" y1="14" x2="5" y2="14"/>
+              <line x1="14" y1="14" x2="9.5" y2="5.75"/>
+            </svg>
+          </div>
+          <div class="pattern-btn" data-mode="square8">
+            <svg width="22" height="22" viewBox="0 0 28 28">
+              <rect x="3" y="3" width="22" height="22"/>
+              <line x1="14" y1="14" x2="3" y2="3"/>
+              <line x1="14" y1="14" x2="14" y2="3"/>
+              <line x1="14" y1="14" x2="25" y2="3"/>
+              <line x1="14" y1="14" x2="25" y2="14"/>
+              <line x1="14" y1="14" x2="25" y2="25"/>
+              <line x1="14" y1="14" x2="14" y2="25"/>
+              <line x1="14" y1="14" x2="3" y2="25"/>
+              <line x1="14" y1="14" x2="3" y2="14"/>
+            </svg>
+          </div>
+          <div class="pattern-btn" data-mode="mirror">
+            <svg width="22" height="22" viewBox="0 0 28 28">
+              <rect x="3" y="3" width="11" height="11"/>
+              <rect x="14" y="3" width="11" height="11"/>
+              <rect x="3" y="14" width="11" height="11"/>
+              <rect x="14" y="14" width="11" height="11"/>
+            </svg>
+          </div>
+          <div class="pattern-btn" data-mode="grid">
+            <svg width="22" height="22" viewBox="0 0 28 28">
+              <rect x="3" y="3" width="22" height="22"/>
+              <line x1="14" y1="3" x2="14" y2="25"/>
+              <line x1="3" y1="14" x2="25" y2="14"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Image</div>
+      <div class="section-body">
+        <div class="field-row">
+          <label>Scale
+            <span class="hint-icon" data-tip="Zoom in/out of the photo inside the selection region. Higher = more zoomed in.">?</span>
+          </label>
+          <span class="val" id="scaleVal">40</span>
+        </div>
+        <input type="range" id="scaleSlider" min="10" max="500" value="40">
+
+        <div class="field-row">
+          <label>Rotation
+            <span class="hint-icon" data-tip="Rotate the photo inside the region. 0-360 degrees.">?</span>
+          </label>
+          <span class="val" id="rotVal">0</span>
+        </div>
+        <input type="range" id="rotSlider" min="0" max="360" value="0">
+
+        <div class="field-row">
+          <label>Tile Size
+            <span class="hint-icon" data-tip="Size of one tile in the pattern. Bigger = fewer, larger tiles. Smaller = more, tiny tiles.">?</span>
+          </label>
+          <span class="val" id="countVal">5 × 3</span>
+        </div>
+        <input type="range" id="countSlider" min="20" max="160" value="60" step="0.01">
+      </div>
+    </div>
+
+    <div class="section source-preview">
+      <div class="section-title">
+        Source
+        <span class="hint-icon" data-tip="A square region of the photo that becomes ONE tile.">?</span>
+      </div>
+      <canvas id="selectorCanvas" width="280" height="280"></canvas>
+      <div class="source-hint">
+        <span class="icon">🖱</span>
+        <span>Drag inside to move the region</span>
+      </div>
+      <button class="reset-btn" id="resetViewBtn">
+        <span class="icon">⟲</span>
+        <span>Reset Position</span>
+      </button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        Palette
+        <span class="hint-icon" data-tip="5 dominant colors extracted from your photo. Click a color to use it as the background color.">?</span>
+      </div>
+      <div class="section-body">
+        <div class="palette-row" id="paletteRow">
+          <div style="font-size:11px; color:var(--muted);">Load a photo to see colors</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        Background
+        <span class="hint-icon" data-tip="What fills the areas OUTSIDE the photo when the region goes past the image edges.">?</span>
+      </div>
+      <div class="section-body">
+        <select id="bgModeSelect">
+          <option value="checker" selected>Checker (transparent)</option>
+          <option value="color">Solid color</option>
+          <option value="blur">Blurred image</option>
+          <option value="edge">Edge pixels (stretch)</option>
+          <option value="mirror">Mirror (reflect)</option>
+        </select>
+        <input type="color" id="bgColorPicker" value="#000000" style="display:none;">
+        <div class="hint" id="bgHint">Transparent checkerboard.</div>
+      </div>
+    </div>
+
+    <div class="export-block">
+      <div class="section">
+        <div class="section-title">Export</div>
+        <div class="section-body">
+          <div class="field-row">
+            <label>Size</label>
+            <select id="exportSizeSelect" style="width:auto;">
+              <option value="1024">~1024</option>
+              <option value="2048" selected>~2048</option>
+              <option value="4096">~4096</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Format</label>
+            <select id="exportFormatSelect" style="width:auto;">
+              <option value="png" selected>PNG</option>
+              <option value="tga">TGA</option>
+              <option value="jpeg">JPEG</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="file-info" id="exportLine">—</div>
+      <div class="bottom-actions">
+        <button class="copy" id="copyBtn">
+          <span class="icon">📋</span>
+          <span>Copy to clipboard</span>
+        </button>
+        <button class="save" id="downloadBtn">
+          <span class="icon">⬇</span>
+          <span>Save</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="tooltip"></div>
+<input type="file" id="fileInput" accept="image/*">
+
+<script>
+const fileBtn = document.getElementById('fileBtn');
+const fileInput = document.getElementById('fileInput');
+const fileLabel = document.getElementById('fileLabel');
+const randomBtn = document.getElementById('randomBtn');
+const pasteBtn = document.getElementById('pasteBtn');
+const copyBtn = document.getElementById('copyBtn');
+const thumbCanvas = document.getElementById('thumbCanvas');
+const thumbCtx = thumbCanvas.getContext('2d');
+const selectorCanvas = document.getElementById('selectorCanvas');
+const patternCanvas = document.getElementById('patternCanvas');
+const patCtx = patternCanvas.getContext('2d');
+const exportLine = document.getElementById('exportLine');
+const bgHint = document.getElementById('bgHint');
+const tooltip = document.getElementById('tooltip');
+const dropOverlay = document.getElementById('dropOverlay');
+const toast = document.getElementById('toast');
+const paletteRow = document.getElementById('paletteRow');
+
+const scaleSlider = document.getElementById('scaleSlider');
+const rotSlider = document.getElementById('rotSlider');
+const scaleVal = document.getElementById('scaleVal');
+const rotVal = document.getElementById('rotVal');
+const resetViewBtn = document.getElementById('resetViewBtn');
+const countSlider = document.getElementById('countSlider');
+const countVal = document.getElementById('countVal');
+const exportSizeSelect = document.getElementById('exportSizeSelect');
+const exportFormatSelect = document.getElementById('exportFormatSelect');
+const downloadBtn = document.getElementById('downloadBtn');
+const bgModeSelect = document.getElementById('bgModeSelect');
+const bgColorPicker = document.getElementById('bgColorPicker');
+
+let S = 60;
+let sourceImg = null;
+let workingImg = null;
+let viewCenter = { x: 0, y: 0 };
+let panStart = null;
+let currentModeVal = 'hexagon';
+let tileCache = { key: '', canvas: null };
+let bgCache = { key: '', canvas: null };
+
+const MAX_WORK_SIZE = 2000;
+const MAX_DRAW_SCALE = 30;
+
+const S_MIN = 20;
+const S_MAX = 186;
+
+function sliderToS(sliderVal) {
+  const t = (sliderVal - 20) / (160 - 20);
+  return S_MAX * Math.pow(S_MIN / S_MAX, t);
+}
+
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 40.0;
+
+function baselineSide() { return Math.min(workingImg.width, workingImg.height); }
+
+function sideImg() {
+  const t = (parseFloat(scaleSlider.value) - 10) / (500 - 10);
+  const zoom = MIN_ZOOM * Math.pow(MAX_ZOOM / MIN_ZOOM, t);
+  let side = baselineSide() / zoom;
+  return Math.max(0.5, Math.min(side, baselineSide() * 4));
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 2000);
+}
+
+function loadImage(img, name) {
+  sourceImg = img;
+  const maxSide = Math.max(img.width, img.height);
+  if (maxSide > MAX_WORK_SIZE) {
+    const sc = MAX_WORK_SIZE / maxSide;
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * sc);
+    c.height = Math.round(img.height * sc);
+    const cctx = c.getContext('2d');
+    cctx.imageSmoothingEnabled = true;
+    cctx.imageSmoothingQuality = 'high';
+    cctx.drawImage(img, 0, 0, c.width, c.height);
+    const wImg = new Image();
+    wImg.onload = () => {
+      workingImg = wImg;
+      viewCenter = { x: wImg.width / 2, y: wImg.height / 2 };
+      tileCache.key = '';
+      bgCache.key = '';
+      extractPalette();
+      render();
+    };
+    wImg.src = c.toDataURL();
+  } else {
+    workingImg = img;
+    viewCenter = { x: img.width / 2, y: img.height / 2 };
+    tileCache.key = '';
+    bgCache.key = '';
+    extractPalette();
+    render();
+  }
+  if (name) fileLabel.textContent = name;
+}
+
+function loadImageFromFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      loadImage(img, file.name);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+fileBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (file) loadImageFromFile(file);
+});
+
+let dragCounter = 0;
+document.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  dragCounter++;
+  if (e.dataTransfer.types.includes('Files')) {
+    dropOverlay.classList.add('visible');
+  }
+});
+document.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter <= 0) {
+    dragCounter = 0;
+    dropOverlay.classList.remove('visible');
+  }
+});
+document.addEventListener('dragover', (e) => {
+  e.preventDefault();
+});
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  dropOverlay.classList.remove('visible');
+  const file = e.dataTransfer.files[0];
+  if (file) loadImageFromFile(file);
+});
+
+async function pasteFromClipboard() {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      for (const type of item.types) {
+        if (type.startsWith('image/')) {
+          const blob = await item.getType(type);
+          const file = new File([blob], 'pasted-image.png', { type });
+          loadImageFromFile(file);
+          return;
+        }
+      }
+    }
+    showToast('No image in clipboard');
+  } catch (err) {
+    showToast('Clipboard access denied — try Ctrl+V instead');
+  }
+}
+
+pasteBtn.addEventListener('click', pasteFromClipboard);
+
+document.addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (file) {
+        loadImageFromFile(file);
+        e.preventDefault();
+        return;
+      }
+    }
+  }
+});
+
+function extractPalette() {
+  if (!workingImg) return;
+  const c = document.createElement('canvas');
+  c.width = 100; c.height = 100;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(workingImg, 0, 0, 100, 100);
+  const data = ctx.getImageData(0, 0, 100, 100).data;
+
+  const bins = {};
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i] >> 6;
+    const g = data[i+1] >> 6;
+    const b = data[i+2] >> 6;
+    const a = data[i+3];
+    if (a < 128) continue;
+    const key = (r << 4) | (g << 2) | b;
+    if (!bins[key]) bins[key] = { count: 0, r: 0, g: 0, b: 0 };
+    bins[key].count++;
+    bins[key].r += data[i];
+    bins[key].g += data[i+1];
+    bins[key].b += data[i+2];
+  }
+
+  const colors = Object.values(bins)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+    .map(b => ({
+      r: Math.round(b.r / b.count),
+      g: Math.round(b.g / b.count),
+      b: Math.round(b.b / b.count)
+    }));
+
+  renderPalette(colors);
+}
+
+function rgbToHex(c) {
+  return '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+function renderPalette(colors) {
+  paletteRow.innerHTML = '';
+  if (!colors || colors.length === 0) {
+    paletteRow.innerHTML = '<div style="font-size:11px; color:var(--muted);">No colors found</div>';
+    return;
+  }
+  colors.forEach(c => {
+    const hex = rgbToHex(c);
+    const sw = document.createElement('div');
+    sw.className = 'palette-swatch';
+    sw.style.background = hex;
+    sw.title = hex + ' — click to use as background';
+    sw.addEventListener('click', () => {
+      bgModeSelect.value = 'color';
+      bgColorPicker.value = hex;
+      bgColorPicker.style.display = 'block';
+      updateBgHint();
+      tileCache.key = '';
+      bgCache.key = '';
+      render();
+      showToast('Color applied: ' + hex);
+    });
+    paletteRow.appendChild(sw);
+  });
+}
+
+function applyRandom() {
+  scaleSlider.value = 30 + Math.random() * 200;
+  scaleVal.textContent = Math.round(parseFloat(scaleSlider.value));
+
+  rotSlider.value = Math.random() * 360;
+  rotVal.textContent = Math.round(parseFloat(rotSlider.value));
+
+  const modes = ['hexagon', 'hexagon12', 'square8', 'mirror', 'grid'];
+  const m = modes[Math.floor(Math.random() * modes.length)];
+  currentModeVal = m;
+  document.querySelectorAll('.pattern-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === m);
+  });
+
+  if (workingImg) {
+    viewCenter = { x: workingImg.width / 2, y: workingImg.height / 2 };
+  }
+
+  tileCache.key = '';
+  bgCache.key = '';
+
+  updatePeriodInfo();
+  updateExportLine();
+  render();
+  showToast('🎲 Random settings applied');
+}
+
+randomBtn.addEventListener('click', applyRandom);
+
+document.querySelectorAll('.pattern-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentModeVal = btn.dataset.mode;
+    tileCache.key = '';
+    render();
+  });
+});
+
+document.querySelectorAll('.section-title').forEach(t => {
+  t.addEventListener('click', (e) => {
+    if (e.target.classList.contains('hint-icon')) return;
+    t.parentElement.classList.toggle('collapsed');
+  });
+});
+
+resetViewBtn.addEventListener('click', () => {
+  if (!workingImg) return;
+  viewCenter = { x: workingImg.width / 2, y: workingImg.height / 2 };
+  tileCache.key = '';
+  bgCache.key = '';
+  render();
+});
+bgModeSelect.addEventListener('change', () => {
+  bgColorPicker.style.display = (bgModeSelect.value === 'color') ? 'block' : 'none';
+  updateBgHint();
+  tileCache.key = '';
+  bgCache.key = '';
+  render();
+});
+bgColorPicker.addEventListener('input', () => {
+  tileCache.key = '';
+  bgCache.key = '';
+  render();
+});
+exportSizeSelect.addEventListener('change', () => { updateExportLine(); draw(); });
+
+function bindSlider(slider, label) {
+  slider.addEventListener('input', () => {
+    label.textContent = Math.round(parseFloat(slider.value));
+    tileCache.key = '';
+    drawSelector();
+    scheduleHeavyRender();
+  });
+}
+bindSlider(scaleSlider, scaleVal);
+bindSlider(rotSlider, rotVal);
+countSlider.addEventListener('input', () => {
+  S = sliderToS(parseFloat(countSlider.value));
+  updatePeriodInfo();
+  updateExportLine();
+  tileCache.key = '';
+  drawSelector();
+  scheduleHeavyRender();
+});
+
+let heavyRenderTimer = null;
+function scheduleHeavyRender() {
+  if (heavyRenderTimer !== null) clearTimeout(heavyRenderTimer);
+  heavyRenderTimer = setTimeout(() => {
+    heavyRenderTimer = null;
+    draw();
+    drawThumb();
+  }, 90);
+}
+
+function getCanvasPos(e) {
+  const rect = selectorCanvas.getBoundingClientRect();
+  const sc = selectorCanvas.width / rect.width;
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+  return { x: cx * sc, y: cy * sc };
+}
+
+function startPan(e) {
+  if (!workingImg) return;
+  e.preventDefault();
+  const p = getCanvasPos(e);
+  panStart = { x: p.x, y: p.y, center: { ...viewCenter } };
+}
+function movePan(e) {
+  if (!panStart || !workingImg) return;
+  e.preventDefault();
+  const p = getCanvasPos(e);
+  const rect = selectorCanvas.getBoundingClientRect();
+  const sc = selectorCanvas.width / rect.width;
+  const dxs = (p.x - panStart.x) / sc;
+  const dys = (p.y - panStart.y) / sc;
+  const win = Math.min(selectorCanvas.width, selectorCanvas.height) - 20;
+  const drawScale = win / sideImg();
+  const rad = parseFloat(rotSlider.value) * Math.PI / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  const invdx = (dxs * cos + dys * sin) / drawScale;
+  const invdy = (-dxs * sin + dys * cos) / drawScale;
+  viewCenter = { x: panStart.center.x - invdx, y: panStart.center.y - invdy };
+  tileCache.key = '';
+  bgCache.key = '';
+  drawSelector();
+  scheduleHeavyRender();
+}
+function endPan() { panStart = null; }
+
+selectorCanvas.addEventListener('mousedown', startPan);
+window.addEventListener('mousemove', movePan);
+window.addEventListener('mouseup', endPan);
+selectorCanvas.addEventListener('touchstart', startPan, { passive: false });
+selectorCanvas.addEventListener('touchmove', movePan, { passive: false });
+selectorCanvas.addEventListener('touchend', endPan);
+
+// ============ ФОН ============
+
+function drawEdgeBackgroundWithImg(ctx, w, h, img) {
+  const mode = bgModeSelect.value;
+  if (mode === 'checker') return;
+  if (mode === 'color') {
+    ctx.fillStyle = bgColorPicker.value;
+    ctx.fillRect(0, 0, w, h);
+    return;
+  }
+  if (!img) return;
+
+  const scale = Math.max(w / img.width, h / img.height) * 1.2;
+  const dw = img.width * scale;
+  const dh = img.height * scale;
+  const dx = (w - dw) / 2;
+  const dy = (h - dh) / 2;
+
+  if (mode === 'blur') {
+    const blurPx = Math.max(4, Math.min(w, h) * 0.08);
+    ctx.save();
+    ctx.filter = `blur(${blurPx}px)`;
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.filter = 'none';
+    ctx.restore();
+    return;
+  }
+
+  if (mode === 'edge') {
+    // Быстрая дилатация на уменьшенном канвасе.
+    const SMALL = 140;
+    const smallW = Math.min(SMALL, w);
+    const smallH = Math.min(SMALL, h);
+
+    const off = document.createElement('canvas');
+    off.width = smallW; off.height = smallH;
+    const offCtx = off.getContext('2d');
+
+    const smallScale = Math.max(smallW / img.width, smallH / img.height) * 1.2;
+    const sDw = img.width * smallScale;
+    const sDh = img.height * smallScale;
+    const sDx = (smallW - sDw) / 2;
+    const sDy = (smallH - sDh) / 2;
+    offCtx.drawImage(img, sDx, sDy, sDw, sDh);
+
+    const imgData = offCtx.getImageData(0, 0, smallW, smallH);
+    const data = imgData.data;
+    const W = smallW, H = smallH;
+
+    const maxIter = 40;
+    for (let iter = 0; iter < maxIter; iter++) {
+      let changed = 0;
+      const alphaBefore = new Uint8Array(W * H);
+      for (let i = 0; i < W * H; i++) alphaBefore[i] = data[i * 4 + 3];
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = (y * W + x) * 4;
+          if (data[idx + 3] > 0) continue;
+          let rSum = 0, gSum = 0, bSum = 0, cnt = 0;
+          if (x > 0 && alphaBefore[y * W + (x - 1)] > 0) {
+            const n = (y * W + (x - 1)) * 4;
+            rSum += data[n]; gSum += data[n + 1]; bSum += data[n + 2]; cnt++;
+          }
+          if (x < W - 1 && alphaBefore[y * W + (x + 1)] > 0) {
+            const n = (y * W + (x + 1)) * 4;
+            rSum += data[n]; gSum += data[n + 1]; bSum += data[n + 2]; cnt++;
+          }
+          if (y > 0 && alphaBefore[(y - 1) * W + x] > 0) {
+            const n = ((y - 1) * W + x) * 4;
+            rSum += data[n]; gSum += data[n + 1]; bSum += data[n + 2]; cnt++;
+          }
+          if (y < H - 1 && alphaBefore[(y + 1) * W + x] > 0) {
+            const n = ((y + 1) * W + x) * 4;
+            rSum += data[n]; gSum += data[n + 1]; bSum += data[n + 2]; cnt++;
+          }
+          if (cnt > 0) {
+            data[idx]     = Math.round(rSum / cnt);
+            data[idx + 1] = Math.round(gSum / cnt);
+            data[idx + 2] = Math.round(bSum / cnt);
+            data[idx + 3] = 255;
+            changed++;
+          }
+        }
+      }
+      if (changed === 0) break;
+    }
+
+    offCtx.putImageData(imgData, 0, 0);
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(off, 0, 0, w, h);
+    return;
+  }
+
+  if (mode === 'mirror') {
+    ctx.drawImage(img, dx, dy, dw, dh);
+    if (dy > 0) {
+      ctx.save();
+      ctx.translate(dx, dy);
+      ctx.scale(1, -1);
+      ctx.drawImage(img, 0, 0, img.width, img.height, 0, -dy, dw, dy);
+      ctx.restore();
+    }
+    if (dy + dh < h) {
+      const bottomSpace = h - (dy + dh);
+      ctx.save();
+      ctx.translate(dx, dy + dh);
+      ctx.scale(1, -1);
+      ctx.drawImage(img, 0, 0, img.width, img.height, 0, -bottomSpace, dw, bottomSpace);
+      ctx.restore();
+    }
+    if (dx > 0) {
+      ctx.save();
+      ctx.translate(dx, dy);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, 0, img.width, img.height, -dx, 0, dx, dh);
+      ctx.restore();
+    }
+    if (dx + dw < w) {
+      const rightSpace = w - (dx + dw);
+      ctx.save();
+      ctx.translate(dx + dw, dy);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, rightSpace, dh);
+      ctx.restore();
+    }
+    return;
+  }
+}
+
+function drawCheckerBackdrop(ctx, w, h) {
+  const cell = 12;
+  for (let y = 0; y < h; y += cell) {
+    for (let x = 0; x < w; x += cell) {
+      const dark = ((Math.round(x / cell) + Math.round(y / cell)) % 2) === 0;
+      ctx.fillStyle = dark ? '#7a7a7a' : '#9a9a9a';
+      ctx.fillRect(x, y, cell, cell);
+    }
+  }
+}
+
+function sideImgForImg(img) {
+  const base = Math.min(img.width, img.height);
+  const t = (parseFloat(scaleSlider.value) - 10) / (500 - 10);
+  const zoom = MIN_ZOOM * Math.pow(MAX_ZOOM / MIN_ZOOM, t);
+  let side = base / zoom;
+  return Math.max(0.5, Math.min(side, base * 4));
+}
+
+function drawSourceInto(ctx, sizePx, img) {
+  if (!img) return;
+  drawEdgeBackgroundWithImg(ctx, sizePx, sizePx, img);
+
+  const side = sideImgForImg(img);
+  let drawScale = sizePx / side;
+  if (drawScale > MAX_DRAW_SCALE) drawScale = MAX_DRAW_SCALE;
+  if (drawScale < 0.01) drawScale = 0.01;
+
+  const rot = parseFloat(rotSlider.value) * Math.PI / 180;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.translate(sizePx / 2, sizePx / 2);
+  ctx.rotate(rot);
+  ctx.scale(drawScale, drawScale);
+  ctx.translate(-viewCenter.x, -viewCenter.y);
+  ctx.drawImage(img, 0, 0);
+  ctx.restore();
+}
+
+function buildTileCanvas(sizePx, img) {
+  const imgType = (img === sourceImg) ? 'orig' : 'work';
+  const imgW = img ? img.width : 0;
+  const key = sizePx + '|' + imgType + '|' + imgW + '|' + viewCenter.x + '|' + viewCenter.y + '|' + rotSlider.value + '|' + scaleSlider.value + '|' + bgModeSelect.value + '|' + bgColorPicker.value;
+  if (tileCache.key === key && tileCache.canvas) {
+    return tileCache.canvas;
+  }
+  const c = document.createElement('canvas');
+  c.width = c.height = sizePx;
+  drawSourceInto(c.getContext('2d'), sizePx, img);
+  tileCache.key = key;
+  tileCache.canvas = c;
+  return c;
+}
+
+function currentMode() { return currentModeVal; }
+
+function drawPatternShapeOverlay(ctx, ox, oy, win, mode) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.rect(ox, oy, win, win);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+  ctx.fill('evenodd');
+  ctx.restore();
+
+  if (mode === 'mirror' || mode === 'grid') return;
+
+  const p1 = { x: ox,           y: oy };
+  const p2 = { x: ox + win,     y: oy };
+  const p3 = { x: ox + win / 2, y: oy + win };
+
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.lineTo(p3.x, p3.y);
+  ctx.closePath();
+  ctx.strokeStyle = '#4da6ff';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawSelector() {
+  const ctx = selectorCanvas.getContext('2d');
+  const cw = selectorCanvas.width, ch = selectorCanvas.height;
+  ctx.clearRect(0, 0, cw, ch);
+
+  ctx.fillStyle = '#101216';
+  ctx.fillRect(0, 0, cw, ch);
+
+  if (!workingImg) return;
+  const win = Math.min(cw, ch) - 20;
+  const ox = (cw - win) / 2, oy = (ch - win) / 2;
+
+  if (bgModeSelect.value === 'checker') {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ox, oy, win, win);
+    ctx.clip();
+    drawCheckerBackdrop(ctx, cw, ch);
+    ctx.restore();
+  } else if (bgModeSelect.value === 'color') {
+    ctx.fillStyle = bgColorPicker.value;
+    ctx.fillRect(ox, oy, win, win);
+  }
+
+  const tmp = document.createElement('canvas');
+  tmp.width = win; tmp.height = win;
+  drawSourceInto(tmp.getContext('2d'), win, workingImg);
+  ctx.drawImage(tmp, ox, oy);
+
+  ctx.strokeStyle = '#4da6ff88';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.strokeRect(ox, oy, win, win);
+  ctx.setLineDash([]);
+
+  drawPatternShapeOverlay(ctx, ox, oy, win, currentMode());
+}
+
+function calcPeriod(mode, s) {
+  if (mode === 'hexagon' || mode === 'hexagon12') {
+    return { px: s * Math.sqrt(3), py: 3 * s };
+  }
+  if (mode === 'mirror') return { px: 2 * s, py: 2 * s };
+  return { px: s, py: s };
+}
+
+function getTileCountInPreview() {
+  const mode = currentMode();
+  const preview = patternCanvas.width;
+  const p = calcPeriod(mode, S);
+  const nX = Math.max(1, Math.round(preview / p.px));
+  const nY = Math.max(1, Math.round(preview / p.py));
+  return { nX, nY };
+}
+
+function calcExportParams(target) {
+  const mode = currentMode();
+  const { nX, nY } = getTileCountInPreview();
+  const isHex = (mode === 'hexagon' || mode === 'hexagon12');
+  const factor = (mode === 'mirror') ? 2 : 1;
+
+  if (isHex) {
+    const sFromX = target / (Math.sqrt(3) * nX);
+    const sFromY = target / (3 * nY);
+    const s = (sFromX + sFromY) / 2;
+    const px = s * Math.sqrt(3);
+    const py = 3 * s;
+    return { w: Math.round(px * nX), h: Math.round(py * nY), nX, nY, s, px, py };
+  }
+
+  const sInt = Math.max(1, Math.round(target / (nX * factor)));
+  return {
+    w: nX * sInt * factor, h: nY * sInt * factor,
+    nX, nY, s: sInt, px: sInt * factor, py: sInt * factor
+  };
+}
+
+function updatePeriodInfo() {
+  const { nX, nY } = getTileCountInPreview();
+  countVal.textContent = `${nX} × ${nY}`;
+}
+
+function updateExportLine() {
+  const target = parseInt(exportSizeSelect.value, 10);
+  const e = calcExportParams(target);
+  exportLine.innerHTML = `${e.nX} × ${e.nY} tiles → ${e.w}×${e.h}`;
+}
+
+function updateBgHint() {
+  const mode = bgModeSelect.value;
+  const hints = {
+    'checker': 'Transparent checkerboard — outside is transparent in PNG.',
+    'color': 'Fill the outside area with a solid color.',
+    'blur': 'Blurred stretched copy of the image.',
+    'edge': 'Stretch the outermost pixels outwards.',
+    'mirror': 'Reflect the image outwards.',
+  };
+  bgHint.textContent = hints[mode] || '';
+}
+
+let tooltipTimer = null;
+document.querySelectorAll('[data-tip]').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    if (tooltipTimer) clearTimeout(tooltipTimer);
+    tooltipTimer = setTimeout(() => {
+      tooltip.textContent = el.getAttribute('data-tip');
+      const rect = el.getBoundingClientRect();
+      const tipW = 260;
+      let left = rect.left + rect.width / 2 - tipW / 2;
+      let top = rect.top - 8;
+      if (left < 8) left = 8;
+      if (left + tipW > window.innerWidth - 8) left = window.innerWidth - tipW - 8;
+      tooltip.classList.remove('bottom');
+      if (top < 40) {
+        top = rect.bottom + 8;
+        tooltip.classList.add('bottom');
+      } else {
+        const tipH = tooltip.offsetHeight || 60;
+        top = rect.top - tipH - 8;
+        if (top < 8) {
+          top = rect.bottom + 8;
+          tooltip.classList.add('bottom');
+        }
+      }
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+      tooltip.classList.add('visible');
+    }, 250);
+  });
+  el.addEventListener('mouseleave', () => {
+    if (tooltipTimer) clearTimeout(tooltipTimer);
+    tooltip.classList.remove('visible');
+  });
+});
+
+function vertex(center, k) {
+  const angle = (-90 + k * 60) * Math.PI / 180;
+  return { x: center.x + S * Math.cos(angle), y: center.y + S * Math.sin(angle) };
+}
+function reflectPoint(p, center, edgePoint) {
+  const dx = edgePoint.x - center.x, dy = edgePoint.y - center.y;
+  const len = Math.hypot(dx, dy);
+  const ux = dx / len, uy = dy / len;
+  const vx = p.x - center.x, vy = p.y - center.y;
+  const proj = vx * ux + vy * uy;
+  const perpx = vx - proj * ux, perpy = vy - proj * uy;
+  return { x: center.x + proj * ux - perpx, y: center.y + proj * uy - perpy };
+}
+function rotatePoint(p, center, angleRad) {
+  const dx = p.x - center.x, dy = p.y - center.y;
+  const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
+  return { x: center.x + dx * cos - dy * sin, y: center.y + dx * sin + dy * cos };
+}
+function sampleBilinear(data, w, h, x, y) {
+  if (x < 0) x = 0; if (x > w - 1) x = w - 1;
+  if (y < 0) y = 0; if (y > h - 1) y = h - 1;
+  const x0 = Math.floor(x), y0 = Math.floor(y);
+  const x1 = Math.min(x0 + 1, w - 1), y1 = Math.min(y0 + 1, h - 1);
+  const fx = x - x0, fy = y - y0;
+  const idx = (xx, yy) => (yy * w + xx) * 4;
+  const out = [0, 0, 0, 0];
+  for (let c = 0; c < 4; c++) {
+    const p00 = data[idx(x0, y0) + c], p10 = data[idx(x1, y0) + c];
+    const p01 = data[idx(x0, y1) + c], p11 = data[idx(x1, y1) + c];
+    const top = p00 * (1 - fx) + p10 * fx;
+    const bot = p01 * (1 - fx) + p11 * fx;
+    out[c] = top * (1 - fy) + bot * fy;
+  }
+  return out;
+}
+
+function buildHexagon(tile, W, H, center) {
+  const tw = tile.width, th = tile.height;
+  const tctx = tile.getContext('2d');
+  const tileData = tctx.getImageData(0, 0, tw, th).data;
+  const v0 = vertex(center, 0), v1 = vertex(center, 1);
+  const ax = (v0.x - center.x) / S, ay = (v0.y - center.y) / S;
+  const bx = (v1.x - center.x) / S, by = (v1.y - center.y) / S;
+  const det = ax * by - bx * ay;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const baseAngle = -90 * Math.PI / 180;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx) - baseAngle;
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / (Math.PI / 3));
+      if (k > 5) k = 5; if (k < 0) k = 0;
+      let p = { x, y };
+      const rotBack = -Math.floor(k / 2) * (2 * Math.PI / 3);
+      p = rotatePoint(p, center, rotBack);
+      if (k % 2 === 1) p = reflectPoint(p, center, v1);
+      const px = p.x - center.x, py = p.y - center.y;
+      const tileX = (px * by - py * bx) / det;
+      const tileY = (py * ax - px * ay) / det;
+      if (tileX < -0.6 || tileY < -0.6 || tileX + tileY > S + 0.6) continue;
+      const [r_, g_, b_, a_] = sampleBilinear(tileData, tw, th, tileX, tileY);
+      outData[outIdx] = r_; outData[outIdx + 1] = g_; outData[outIdx + 2] = b_; outData[outIdx + 3] = a_;
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function edgeMid(center, k) {
+  const a = vertex(center, k), b = vertex(center, k + 1);
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function buildHexagon12(tile, W, H, center) {
+  const tw = tile.width, th = tile.height;
+  const tctx = tile.getContext('2d');
+  const tileData = tctx.getImageData(0, 0, tw, th).data;
+  const b0 = vertex(center, 0);
+  const b1 = edgeMid(center, 0);
+  const ax = (b0.x - center.x) / S, ay = (b0.y - center.y) / S;
+  const bx = (b1.x - center.x) / S, by = (b1.y - center.y) / S;
+  const det = ax * by - bx * ay;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const baseAngle = -90 * Math.PI / 180;
+  const SECTOR = Math.PI / 6;
+  const STEP = Math.PI / 3;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx) - baseAngle;
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 11) k = 11; if (k < 0) k = 0;
+      let p = { x, y };
+      const rotBack = -Math.floor(k / 2) * STEP;
+      p = rotatePoint(p, center, rotBack);
+      if (k % 2 === 1) p = reflectPoint(p, center, b1);
+      const px = p.x - center.x, py = p.y - center.y;
+      const tileX = (px * by - py * bx) / det;
+      const tileY = (py * ax - px * ay) / det;
+      if (tileX < -0.6 || tileY < -0.6 || tileX + tileY > S + 0.6) continue;
+      const [r_, g_, b_, a_] = sampleBilinear(tileData, tw, th, tileX, tileY);
+      outData[outIdx] = r_; outData[outIdx + 1] = g_; outData[outIdx + 2] = b_; outData[outIdx + 3] = a_;
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function squareBoundaryPoint(center, i) {
+  const angle = i * 45 * Math.PI / 180;
+  const isCorner = (i % 2 === 1);
+  const r = isCorner ? (S / 2) * Math.SQRT2 : (S / 2);
+  return { x: center.x + r * Math.cos(angle), y: center.y + r * Math.sin(angle) };
+}
+
+function buildSquare8(tile, W, H, center) {
+  const tw = tile.width, th = tile.height;
+  const tctx = tile.getContext('2d');
+  const tileData = tctx.getImageData(0, 0, tw, th).data;
+  const b0 = squareBoundaryPoint(center, 0);
+  const b1 = squareBoundaryPoint(center, 1);
+  const ax = (b0.x - center.x) / S, ay = (b0.y - center.y) / S;
+  const bx = (b1.x - center.x) / S, by = (b1.y - center.y) / S;
+  const det = ax * by - bx * ay;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const baseAngle = 0;
+  const SECTOR = Math.PI / 4;
+  const STEP = Math.PI / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx) - baseAngle;
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 7) k = 7; if (k < 0) k = 0;
+      let p = { x, y };
+      const rotBack = -Math.floor(k / 2) * STEP;
+      p = rotatePoint(p, center, rotBack);
+      if (k % 2 === 1) p = reflectPoint(p, center, b1);
+      const px = p.x - center.x, py = p.y - center.y;
+      const tileX = (px * by - py * bx) / det;
+      const tileY = (py * ax - px * ay) / det;
+      if (tileX < -0.6 || tileY < -0.6 || tileX + tileY > S + 0.6) continue;
+      const [r_, g_, b_, a_] = sampleBilinear(tileData, tw, th, tileX, tileY);
+      outData[outIdx] = r_; outData[outIdx + 1] = g_; outData[outIdx + 2] = b_; outData[outIdx + 3] = a_;
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+let rafPending = false;
+function render() {
+  if (rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => {
+    rafPending = false;
+    drawSelector();
+    draw();
+    updatePeriodInfo();
+    updateExportLine();
+    drawThumb();
+  });
+}
+
+function buildMirrorBlock(tile, useMirror) {
+  const s = tile.width;
+  if (!useMirror) return tile;
+  const block = document.createElement('canvas');
+  block.width = s * 2; block.height = s * 2;
+  const bctx = block.getContext('2d');
+  bctx.drawImage(tile, 0, 0);
+  bctx.save(); bctx.translate(s * 2, 0); bctx.scale(-1, 1); bctx.drawImage(tile, 0, 0); bctx.restore();
+  bctx.save(); bctx.translate(0, s * 2); bctx.scale(1, -1); bctx.drawImage(tile, 0, 0); bctx.restore();
+  bctx.save(); bctx.translate(s * 2, s * 2); bctx.scale(-1, -1); bctx.drawImage(tile, 0, 0); bctx.restore();
+  return block;
+}
+
+function paintBackdropIfChecker(ctx, w, h) {
+  if (bgModeSelect.value === 'checker') drawCheckerBackdrop(ctx, w, h);
+}
+
+function drawThumb() {
+  if (!workingImg) return;
+  thumbCtx.clearRect(0, 0, 64, 64);
+  const mode = currentMode();
+  let el;
+  const tileCanvas = buildTileCanvas(S, workingImg);
+  if (mode === 'hexagon' || mode === 'hexagon12') {
+    const builder = mode === 'hexagon' ? buildHexagon : buildHexagon12;
+    const boxW = Math.ceil(S * Math.sqrt(3) * 1.1);
+    const boxH = Math.ceil(S * 2.05);
+    const boxCenter = { x: boxW / 2, y: boxH / 2 };
+    el = builder(tileCanvas, boxW, boxH, boxCenter);
+  } else if (mode === 'square8') {
+    el = buildSquare8(tileCanvas, S, S, { x: S / 2, y: S / 2 });
+  } else {
+    el = buildMirrorBlock(tileCanvas, mode === 'mirror');
+  }
+  const sc = Math.min(64 / el.width, 64 / el.height);
+  const dw = el.width * sc, dh = el.height * sc;
+  thumbCtx.drawImage(el, (64 - dw) / 2, (64 - dh) / 2, dw, dh);
+}
+
+function paintPattern(ctx, W, H, mode, tile, overrideNX, overrideNY) {
+  ctx.clearRect(0, 0, W, H);
+  paintBackdropIfChecker(ctx, W, H);
+
+  const counts = (overrideNX != null && overrideNY != null)
+    ? { nX: overrideNX, nY: overrideNY }
+    : getTileCountInPreview();
+
+  if (mode === 'hexagon' || mode === 'hexagon12') {
+    const builder = mode === 'hexagon' ? buildHexagon : buildHexagon12;
+    const boxW = Math.ceil(S * Math.sqrt(3) * 1.1);
+    const boxH = Math.ceil(S * 2.05);
+    const boxCenter = { x: boxW / 2, y: boxH / 2 };
+    const hexTile = builder(tile, boxW, boxH, boxCenter);
+    const stepX = S * Math.sqrt(3);
+    const stepY = 1.5 * S;
+    const nCols = Math.ceil(W / stepX) + 4;
+    const nRows = Math.ceil(H / stepY) + 4;
+    for (let row = -3; row < nRows; row++) {
+      const hy = row * stepY;
+      const xShift = (row % 2 === 0) ? 0 : stepX / 2;
+      for (let col = -3; col < nCols; col++) {
+        const hx = col * stepX + xShift;
+        ctx.drawImage(hexTile, Math.round(hx - boxCenter.x), Math.round(hy - boxCenter.y));
+      }
+    }
+    return hexTile;
+  }
+
+  let sqTile;
+  if (mode === 'square8') {
+    sqTile = buildSquare8(tile, S, S, { x: S / 2, y: S / 2 });
+  } else {
+    sqTile = buildMirrorBlock(tile, mode === 'mirror');
+  }
+  const xs = [];
+  for (let i = 0; i <= counts.nX; i++) xs.push(Math.round(i * W / counts.nX));
+  const ys = [];
+  for (let j = 0; j <= counts.nY; j++) ys.push(Math.round(j * H / counts.nY));
+  const tw = sqTile.width, th = sqTile.height;
+  for (let j = 0; j < counts.nY; j++) {
+    for (let i = 0; i < counts.nX; i++) {
+      const dx = xs[i], dy = ys[j];
+      const dw = xs[i + 1] - xs[i];
+      const dh = ys[j + 1] - ys[j];
+      ctx.drawImage(sqTile, 0, 0, tw, th, dx, dy, dw, dh);
+    }
+  }
+  return sqTile;
+}
+
+function draw() {
+  if (!workingImg) return;
+  const mode = currentMode();
+  const W = patternCanvas.width, H = patternCanvas.height;
+  const target = parseInt(exportSizeSelect.value, 10);
+  const e = calcExportParams(target);
+  const tileE = buildTileCanvas(e.s, workingImg);
+  const off = document.createElement('canvas');
+  off.width = e.w; off.height = e.h;
+  const offCtx = off.getContext('2d');
+  const oldS = S;
+  S = e.s;
+  paintPattern(offCtx, e.w, e.h, mode, tileE, e.nX, e.nY);
+  S = oldS;
+
+  patCtx.clearRect(0, 0, W, H);
+  if (bgModeSelect.value === 'checker') {
+    drawCheckerBackdrop(patCtx, W, H);
+  } else {
+    patCtx.fillStyle = '#000';
+    patCtx.fillRect(0, 0, W, H);
+  }
+  const scale = Math.min(W / e.w, H / e.h);
+  const dw = e.w * scale, dh = e.h * scale;
+  const dx = (W - dw) / 2, dy = (H - dh) / 2;
+  patCtx.imageSmoothingEnabled = true;
+  patCtx.imageSmoothingQuality = 'high';
+  patCtx.drawImage(off, dx, dy, dw, dh);
+}
+
+function canvasToTGABlob(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext('2d');
+  const src = ctx.getImageData(0, 0, w, h).data;
+  const header = new Uint8Array(18);
+  header[2] = 2;
+  header[12] = w & 0xFF; header[13] = (w >> 8) & 0xFF;
+  header[14] = h & 0xFF; header[15] = (h >> 8) & 0xFF;
+  header[16] = 32;
+  header[17] = 0x28;
+  const pixels = new Uint8Array(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    const si = i * 4;
+    pixels[si] = src[si + 2];
+    pixels[si + 1] = src[si + 1];
+    pixels[si + 2] = src[si];
+    pixels[si + 3] = src[si + 3];
+  }
+  return new Blob([header, pixels], { type: 'application/octet-stream' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildFinalCanvas() {
+  if (!workingImg) return null;
+  const mode = currentMode();
+  const target = parseInt(exportSizeSelect.value, 10);
+  const e = calcExportParams(target);
+
+  const sc = sourceImg.width / workingImg.width;
+
+  const c = document.createElement('canvas');
+  c.width = e.w; c.height = e.h;
+  const ctx = c.getContext('2d');
+
+  const oldWorking = workingImg;
+  const oldCenter = { ...viewCenter };
+  const oldS = S;
+
+  workingImg = sourceImg;
+  viewCenter = { x: oldCenter.x * sc, y: oldCenter.y * sc };
+  S = e.s * sc;
+
+  const sizePx = Math.ceil(S);
+  const tileFromOriginal = document.createElement('canvas');
+  tileFromOriginal.width = tileFromOriginal.height = sizePx;
+  drawSourceInto(tileFromOriginal.getContext('2d'), sizePx, sourceImg);
+
+  if (bgModeSelect.value === 'color') {
+    ctx.fillStyle = bgColorPicker.value;
+    ctx.fillRect(0, 0, e.w, e.h);
+  } else if (bgModeSelect.value !== 'checker') {
+    drawEdgeBackgroundWithImg(ctx, e.w, e.h, sourceImg);
+  }
+
+  if (mode === 'hexagon' || mode === 'hexagon12') {
+    const builder = mode === 'hexagon' ? buildHexagon : buildHexagon12;
+    const boxW = Math.ceil(S * Math.sqrt(3) * 1.1);
+    const boxH = Math.ceil(S * 2.05);
+    const boxCenter = { x: boxW / 2, y: boxH / 2 };
+    const hexTile = builder(tileFromOriginal, boxW, boxH, boxCenter);
+    const stepX = S * Math.sqrt(3);
+    const stepY = 1.5 * S;
+    const nCols = Math.ceil(e.w / stepX) + 4;
+    const nRows = Math.ceil(e.h / stepY) + 4;
+    for (let row = -3; row < nRows; row++) {
+      const hy = row * stepY;
+      const xShift = (row % 2 === 0) ? 0 : stepX / 2;
+      for (let col = -3; col < nCols; col++) {
+        const hx = col * stepX + xShift;
+        ctx.drawImage(hexTile, Math.round(hx - boxCenter.x), Math.round(hy - boxCenter.y));
+      }
+    }
+  } else {
+    let sqTile;
+    if (mode === 'square8') {
+      sqTile = buildSquare8(tileFromOriginal, S, S, { x: S / 2, y: S / 2 });
+    } else {
+      sqTile = buildMirrorBlock(tileFromOriginal, mode === 'mirror');
+    }
+    const xs = [];
+    for (let i = 0; i <= e.nX; i++) xs.push(Math.round(i * e.w / e.nX));
+    const ys = [];
+    for (let j = 0; j <= e.nY; j++) ys.push(Math.round(j * e.h / e.nY));
+    const tw = sqTile.width, th = sqTile.height;
+    for (let j = 0; j < e.nY; j++) {
+      for (let i = 0; i < e.nX; i++) {
+        const dx = xs[i], dy = ys[j];
+        const dw = xs[i + 1] - xs[i];
+        const dh = ys[j + 1] - ys[j];
+        ctx.drawImage(sqTile, 0, 0, tw, th, dx, dy, dw, dh);
+      }
+    }
+  }
+
+  workingImg = oldWorking;
+  viewCenter = oldCenter;
+  S = oldS;
+  return c;
+}
+
+downloadBtn.addEventListener('click', () => {
+  if (!workingImg) { alert('Choose a photo first.'); return; }
+  showToast('Rendering...');
+  setTimeout(() => {
+    const canvas = buildFinalCanvas();
+    const format = exportFormatSelect.value;
+    let outCanvas = canvas;
+    if (format === 'jpeg') {
+      const flat = document.createElement('canvas');
+      flat.width = canvas.width; flat.height = canvas.height;
+      const fctx = flat.getContext('2d');
+      fctx.fillStyle = '#ffffff';
+      fctx.fillRect(0, 0, canvas.width, canvas.height);
+      fctx.drawImage(canvas, 0, 0);
+      outCanvas = flat;
+    }
+    if (format === 'tga') {
+      downloadBlob(canvasToTGABlob(outCanvas), `pattern_${outCanvas.width}x${outCanvas.height}.tga`);
+    } else {
+      const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+      const ext = format === 'jpeg' ? 'jpg' : 'png';
+      outCanvas.toBlob((blob) => {
+        downloadBlob(blob, `pattern_${outCanvas.width}x${outCanvas.height}.${ext}`);
+        showToast('Saved!');
+      }, mime, 0.95);
+    }
+  }, 50);
+});
+
+copyBtn.addEventListener('click', async () => {
+  if (!workingImg) { alert('Choose a photo first.'); return; }
+  showToast('Rendering...');
+  setTimeout(async () => {
+    const canvas = buildFinalCanvas();
+    try {
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      showToast('📋 Copied to clipboard!');
+    } catch (err) {
+      showToast('Failed. Try Download instead.');
+    }
+  }, 50);
+});
+
+S = sliderToS(parseFloat(countSlider.value));
+updatePeriodInfo();
+updateExportLine();
+updateBgHint();
+</script>
+</body>
+</html>
