@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pattern</title>
+<style>
+:root{--bg:#2b2b2b;--panel:#383838;--panel2:#454545;--bd:#1e1e1e;--tx:#e8e8e8;--mt:#9a9a9a;--ac:#2d6cdf}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,"Segoe UI",sans-serif;margin:0;overflow:hidden;height:100vh}
+#do{position:fixed;inset:0;background:rgba(45,108,223,.25);border:4px dashed var(--ac);z-index:9999;display:none;align-items:center;justify-content:center;pointer-events:none}
+#do.v{display:flex}
+#do .m{background:rgba(0,0,0,.8);color:#fff;padding:24px 40px;border-radius:8px;font-size:20px;font-weight:600}
+.ct{height:100vh;display:grid;grid-template-columns:1fr 340px;overflow:hidden}
+.cc{background:#1a1a1a;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:16px;position:relative}
+.cc canvas{max-width:100%;max-height:100%;display:block;background:#000;box-shadow:0 0 20px rgba(0,0,0,.5)}
+.rc{background:var(--panel);border-left:1px solid var(--bd);overflow-y:auto;display:flex;flex-direction:column;height:100vh}
+.s{padding:12px 16px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.st{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;cursor:pointer;user-select:none}
+.st::before{content:'▾';font-size:10px;transition:transform .15s}
+.s.cl .st::before{transform:rotate(-90deg)}
+.s.cl .sb{display:none}
+.sb{display:flex;flex-direction:column;gap:10px}
+.hn{color:var(--mt);font-size:11px;line-height:1.4;margin-top:6px}
+.hi{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--panel2);color:var(--mt);font-size:9px;font-weight:600;cursor:help;margin-left:4px;user-select:none}
+.hi:hover{background:var(--ac);color:#fff}
+.s.ps{background:linear-gradient(180deg,#3a4660,#343c52);border-left:3px solid var(--ac);padding:14px 16px}
+.s.ps .st{color:#cfe0ff;font-weight:700;font-size:12px;letter-spacing:1px;margin-bottom:12px}
+.s.ps .st::before{color:var(--ac)}
+.pw{display:flex;gap:10px;align-items:center;background:rgba(0,0,0,.25);padding:8px;border-radius:6px;border:1px solid rgba(45,108,223,.4)}
+.pb{width:60px;height:60px;border:2px solid var(--ac);border-radius:4px;overflow:hidden;flex-shrink:0;background:#000;box-shadow:0 0 8px rgba(45,108,223,.5)}
+.pb canvas{width:100%;height:100%;display:block}
+#pSel{background:#2a3242;color:#fff;border:1px solid rgba(45,108,223,.6);border-radius:4px;padding:8px 10px;font-size:12px;font-weight:600;width:100%;cursor:pointer}
+#pSel:hover{border-color:var(--ac)}
+#pSel optgroup{background:#1a1f2b;color:#9ab4e8;font-weight:700}
+#pSel option{background:#2a3242;color:#e8e8e8;font-weight:400}
+#tt{position:fixed;background:#0a0a0a;color:#e8e8e8;padding:8px 12px;border-radius:4px;font-size:11px;line-height:1.4;max-width:260px;box-shadow:0 4px 16px rgba(0,0,0,.7);border:1px solid #333;z-index:99999;pointer-events:none;opacity:0;transition:opacity .12s}
+#tt.v{opacity:1}
+#tt::before{content:'';position:absolute;top:-6px;left:50%;transform:translateX(-50%);border:5px solid transparent;border-bottom-color:#0a0a0a}
+#tt.bt::before{top:auto;bottom:-6px;border-bottom-color:transparent;border-top-color:#0a0a0a}
+.fb{display:flex;align-items:center;gap:8px;background:var(--panel2);color:var(--tx);border:1px solid var(--bd);border-radius:4px;padding:10px 12px;cursor:pointer;font-size:12px;width:100%;transition:border-color .15s}
+.fb:hover{border-color:var(--ac)}
+.fb .fi{font-size:16px}
+.fb .fn{color:var(--mt);font-size:11px;margin-left:auto;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ar{display:flex;gap:6px}
+.ar button{flex:1;background:var(--panel2);color:var(--tx);border:1px solid var(--bd);border-radius:4px;padding:8px 6px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;transition:border-color .15s}
+.ar button:hover{border-color:var(--ac)}
+.ar button .i{font-size:13px}
+.fr{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fr label{font-size:12px;color:var(--tx);display:flex;align-items:center}
+.fr .v{font-size:11px;color:var(--mt);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--ac);margin:0}
+select{background:var(--panel2);color:var(--tx);border:1px solid var(--bd);border-radius:4px;padding:6px 8px;font-size:12px;width:100%;cursor:pointer}
+select:hover{border-color:#666}
+.tr{display:flex;gap:10px;align-items:center}
+.tb{width:64px;height:64px;border:2px solid var(--ac);border-radius:4px;overflow:hidden;flex-shrink:0;background:#000}
+.tb canvas{width:100%;height:100%;display:block}
+.sp canvas{width:100%;aspect-ratio:1;background:#0a0a0a;border:1px solid var(--bd);border-radius:4px;display:block;cursor:grab;touch-action:none}
+.sp canvas:active{cursor:grabbing}
+.rb{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--panel2);color:var(--tx);border:1px solid var(--bd);border-radius:4px;padding:8px 12px;font-size:12px;cursor:pointer;width:100%;transition:border-color .15s}
+.rb:hover{border-color:var(--ac)}
+.rb .i{font-size:14px}
+.sh{display:flex;align-items:center;gap:6px;color:var(--mt);font-size:11px;margin-top:8px;padding:6px 8px;background:#2a2a2a;border-radius:4px;border-left:2px solid var(--ac)}
+.sh .i{font-size:14px;color:var(--ac)}
+.pr{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.psw{width:36px;height:36px;border:2px solid var(--bd);border-radius:4px;cursor:pointer;transition:transform .1s}
+.psw:hover{transform:scale(1.1);border-color:var(--ac)}
+.eb{margin-top:auto;border-top:2px solid var(--ac);background:#2f2f2f;flex-shrink:0}
+.ba{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.ba button{width:100%;padding:10px 12px;border-radius:4px;font-size:12px;cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;gap:8px}
+.ba .sv{background:var(--ac);color:#fff;font-weight:600}
+.ba .sv:hover{filter:brightness(1.1)}
+.ba .cp{background:var(--panel2);color:var(--tx);border:1px solid var(--bd)}
+.ba .cp:hover{border-color:var(--ac)}
+.ba .i{font-size:14px}
+input[type=file]{display:none}
+.fin{font-size:10px;color:var(--mt);padding:8px 16px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;border-bottom:1px solid var(--bd)}
+.rc::-webkit-scrollbar{width:8px}
+.rc::-webkit-scrollbar-track{background:var(--panel)}
+.rc::-webkit-scrollbar-thumb{background:var(--panel2);border-radius:4px}
+.rc::-webkit-scrollbar-thumb:hover{background:#555}
+#tst{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);background:#0a0a0a;color:#fff;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.8);border:1px solid var(--ac);z-index:99998;opacity:0;transition:all .3s;pointer-events:none}
+#tst.v{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:700px){.ct{grid-template-columns:1fr;grid-template-rows:45vh 55vh;height:100vh}.cc{padding:8px}.rc{border-left:none;border-top:1px solid var(--bd);height:55vh}.tb{width:48px;height:48px}.tb canvas{width:48px;height:48px}}
+</style>
+</head>
+<body>
+<div id="do"><div class="m">📁 Drop your image here</div></div>
+<div id="tst"></div>
+<div class="ct">
+<div class="cc"><canvas id="pc" width="900" height="900"></canvas></div>
+<div class="rc">
+
+<div class="s"><div class="st">File</div><div class="sb">
+<button class="fb" id="fb"><span class="fi">📁</span><span>Choose File</span><span class="fn" id="fl">not selected</span></button>
+<div class="ar">
+<button id="rnd" title="Random scale & rotation"><span class="i">🎲</span><span>Random</span></button>
+<button id="pst" title="Paste from clipboard"><span class="i">📋</span><span>Paste</span></button>
+</div>
+<div class="hn">Drag & drop a file anywhere, or press Ctrl+V to paste</div>
+<div class="tr" style="margin-top:8px"><div class="tb"><canvas id="tc" width="64" height="64"></canvas></div><div style="font-size:11px;color:var(--mt)">Current tile</div></div>
+</div></div>
+
+<div class="s ps"><div class="st">⬢ Pattern Type <span class="hi" data-tip="Symmetry group or aperiodic pattern type.">?</span></div><div class="sb">
+<div class="pw">
+<div class="pb"><canvas id="pp" width="60" height="60"></canvas></div>
+<select id="pSel" style="flex:1">
+<optgroup label="Symmetry groups">
+<option value="hexagon" selected>Hexagon (6 sectors)</option>
+<option value="hexagon12">Hexagon 12 (12 sectors)</option>
+<option value="square8">Square 8 (rhombus)</option>
+<option value="square4">Square 4 (90° rotation)</option>
+<option value="triangle6">Triangle 6</option>
+<option value="triangle12">Triangle 12</option>
+<option value="kaleido">Kaleidoscope</option>
+<option value="mirror">Mirror 2×2</option>
+<option value="grid">Grid (no mirrors)</option>
+<option value="rot180">Rotation 180°</option>
+<option value="glide">Glide reflection</option>
+<option value="pmm">Rectangular (pmm)</option>
+</optgroup>
+<optgroup label="Aperiodic / decorative">
+<option value="penrose">Penrose (rhombs)</option>
+<option value="hat">Hat (monotile-ish)</option>
+<option value="pinwheel">Pinwheel</option>
+<option value="truchet">Truchet tiles</option>
+<option value="moire">Moiré</option>
+<option value="voronoi">Voronoi (pseudo)</option>
+</optgroup>
+</select>
+</div>
+</div></div>
+
+<div class="s"><div class="st">Image</div><div class="sb">
+<div class="fr"><label>Scale <span class="hi" data-tip="Zoom in/out of the photo inside the selection region.">?</span></label><span class="v" id="scV">40</span></div>
+<input type="range" id="scS" min="10" max="500" value="40">
+<div class="fr"><label>Rotation <span class="hi" data-tip="Rotate the photo inside the region. 0-360 degrees.">?</span></label><span class="v" id="rtV">0</span></div>
+<input type="range" id="rtS" min="0" max="360" value="0">
+<div class="fr"><label>Tile Size <span class="hi" data-tip="Size of one tile in the pattern.">?</span></label><span class="v" id="cnV">5 × 3</span></div>
+<input type="range" id="cnS" min="20" max="160" value="60" step="0.01">
+</div></div>
+
+<div class="s sp"><div class="st">Source <span class="hi" data-tip="Blue shape shows exactly what part of the photo becomes one tile.">?</span></div>
+<canvas id="slc" width="280" height="280"></canvas>
+<div class="sh"><span class="i">🖱</span><span>Drag inside to move the region</span></div>
+<button class="rb" id="rsv"><span class="i">⟲</span><span>Reset Position</span></button>
+</div>
+
+<div class="s"><div class="st">Palette <span class="hi" data-tip="5 dominant colors. Click to use as background.">?</span></div><div class="sb">
+<div class="pr" id="plr"><div style="font-size:11px;color:var(--mt)">Load a photo to see colors</div></div>
+</div></div>
+
+<div class="s"><div class="st">Background <span class="hi" data-tip="What fills areas outside the photo.">?</span></div><div class="sb">
+<select id="bgS">
+<option value="checker" selected>Checker (transparent)</option>
+<option value="color">Solid color</option>
+<option value="blur">Blurred image</option>
+<option value="edge">Edge (whole image contain)</option>
+<option value="edge-region">Edge (region-aware)</option>
+<option value="mirror">Mirror (whole image contain)</option>
+<option value="mirror-region">Mirror (region-aware)</option>
+</select>
+<input type="color" id="bgC" value="#000000" style="display:none">
+<div class="hn" id="bgH">Transparent checkerboard.</div>
+</div></div>
+
+<div class="eb">
+<div class="s"><div class="st">Export</div><div class="sb">
+<div class="fr"><label>Size</label><select id="esS" style="width:auto"><option value="1024">~1024</option><option value="2048" selected>~2048</option><option value="4096">~4096</option></select></div>
+<div class="fr"><label>Format</label><select id="efS" style="width:auto"><option value="png" selected>PNG</option><option value="tga">TGA</option><option value="jpeg">JPEG</option></select></div>
+</div></div>
+<div class="fin" id="el">—</div>
+<div class="ba">
+<button class="cp" id="cpb"><span class="i">📋</span><span>Copy to clipboard</span></button>
+<button class="sv" id="dlb"><span class="i">⬇</span><span>Save</span></button>
+</div>
+</div>
+
+</div></div>
+
+<div id="tt"></div>
+<input type="file" id="fi" accept="image/*">
+
+<script>
+const $=id=>document.getElementById(id);
+const fb=$('fb'),fi=$('fi'),fl=$('fl'),rnd=$('rnd'),pst=$('pst'),cpb=$('cpb');
+const tc=$('tc'),tx=tc.getContext('2d');
+const slc=$('slc'),pc=$('pc'),px=pc.getContext('2d');
+const el=$('el'),bgH=$('bgH'),tt=$('tt'),do_=$('do'),tst=$('tst'),plr=$('plr');
+const pSel=$('pSel'),pp=$('pp'),ppx=pp.getContext('2d');
+const scS=$('scS'),rtS=$('rtS'),scV=$('scV'),rtV=$('rtV'),rsv=$('rsv');
+const cnS=$('cnS'),cnV=$('cnV'),esS=$('esS'),efS=$('efS'),dlb=$('dlb');
+const bgS=$('bgS'),bgC=$('bgC');
+
+let S=60,src=null,img=null,vc={x:0,y:0},ps=null,md='hexagon';
+let tC={k:'',c:null},eC={k:'',c:null},oC={k:'',c:null};
+const MWS=2000,MDS=30,MTS=8192,SMIN=20,SMAX=186;
+const mz=.5,MZ=40;
+
+const s2S=v=>{const a=+cnS.min,b=+cnS.max;return SMAX*Math.pow(SMIN/SMAX,(v-a)/(b-a))};
+const sIF=i=>{if(!i)return 100;const b=Math.min(i.width,i.height);const t=(+scS.value-10)/490;const z=mz*Math.pow(MZ/mz,t);return Math.max(.5,Math.min(b/z,b*4))};
+
+let tT=null;
+function toast(m){tst.textContent=m;tst.classList.add('v');if(tT)clearTimeout(tT);tT=setTimeout(()=>tst.classList.remove('v'),2000)}
+function inv(){tC.k='';eC.k='';oC.k=''}
+
+function loadImg(i,n){
+  src=i;
+  const ms=Math.max(i.width,i.height);
+  const fin=w=>{img=w;vc={x:w.width/2,y:w.height/2};inv();pal();render();pPrev()};
+  if(ms>MWS){
+    const s=MWS/ms,c=document.createElement('canvas');
+    c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);
+    const x=c.getContext('2d');
+    x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+    x.drawImage(i,0,0,c.width,c.height);
+    const w=new Image();w.onload=()=>fin(w);w.src=c.toDataURL();
+  } else fin(i);
+  if(n)fl.textContent=n;
+}
+
+function loadFile(f){
+  if(!f||!f.type.startsWith('image/'))return;
+  const r=new FileReader();
+  r.onload=e=>{const i=new Image();i.onload=()=>loadImg(i,f.name);i.src=e.target.result};
+  r.readAsDataURL(f);
+}
+
+fb.onclick=()=>fi.click();
+fi.onchange=()=>{const f=fi.files[0];if(f)loadFile(f)};
+
+let dc=0;
+document.addEventListener('dragenter',e=>{e.preventDefault();dc++;if(e.dataTransfer.types.includes('Files'))do_.classList.add('v')});
+document.addEventListener('dragleave',e=>{e.preventDefault();dc--;if(dc<=0){dc=0;do_.classList.remove('v')}});
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{e.preventDefault();dc=0;do_.classList.remove('v');const f=e.dataTransfer.files[0];if(f)loadFile(f)});
+
+pst.onclick=async()=>{
+  try{const it=await navigator.clipboard.read();
+    for(const i of it)for(const t of i.types)if(t.startsWith('image/')){const b=await i.getType(t);loadFile(new File([b],'pasted.png',{type:t}));return}
+    toast('No image in clipboard');
+  }catch(e){toast('Clipboard access denied — try Ctrl+V')}
+};
+document.addEventListener('paste',e=>{
+  const it=e.clipboardData?.items;if(!it)return;
+  for(const i of it)if(i.type.startsWith('image/')){const f=i.getAsFile();if(f){loadFile(f);e.preventDefault();return}}
+});
+
+function pal(){
+  if(!img)return;
+  const c=document.createElement('canvas');c.width=c.height=100;
+  const x=c.getContext('2d');x.drawImage(img,0,0,100,100);
+  const d=x.getImageData(0,0,100,100).data,bs={};
+  for(let i=0;i<d.length;i+=4){
+    const r=d[i]>>6,g=d[i+1]>>6,b=d[i+2]>>6;
+    if(d[i+3]<128)continue;
+    const k=(r<<4)|(g<<2)|b;
+    if(!bs[k])bs[k]={n:0,r:0,g:0,b:0};
+    bs[k].n++;bs[k].r+=d[i];bs[k].g+=d[i+1];bs[k].b+=d[i+2];
+  }
+  const cs=Object.values(bs).sort((a,b)=>b.n-a.n).slice(0,5).map(b=>({r:Math.round(b.r/b.n),g:Math.round(b.g/b.n),b:Math.round(b.b/b.n)}));
+  rPal(cs);
+}
+const hx=c=>'#'+[c.r,c.g,c.b].map(v=>v.toString(16).padStart(2,'0')).join('');
+function rPal(cs){
+  plr.innerHTML='';
+  if(!cs||!cs.length){plr.innerHTML='<div style="font-size:11px;color:var(--mt)">No colors found</div>';return}
+  cs.forEach(c=>{
+    const h=hx(c),sw=document.createElement('div');
+    sw.className='psw';sw.style.background=h;sw.title=h+' — click to use as background';
+    sw.onclick=()=>{bgS.value='color';bgC.value=h;bgC.style.display='block';bgHint();inv();render();toast('Color applied: '+h)};
+    plr.appendChild(sw);
+  });
+}
+
+rnd.onclick=()=>{
+  scS.value=30+Math.random()*200;scV.textContent=Math.round(+scS.value);
+  rtS.value=Math.random()*360;rtV.textContent=Math.round(+rtS.value);
+  if(img)vc={x:img.width/2,y:img.height/2};
+  inv();per();exp();render();pPrev();toast('🎲 Random scale & rotation');
+};
+
+pSel.onchange=()=>{md=pSel.value;inv();per();exp();render();pPrev()};
+
+document.querySelectorAll('.st').forEach(t=>{
+  t.onclick=e=>{if(e.target.classList.contains('hi'))return;t.parentElement.classList.toggle('cl')};
+});
+
+rsv.onclick=()=>{if(!img)return;vc={x:img.width/2,y:img.height/2};inv();render();pPrev()};
+
+bgS.onchange=()=>{bgC.style.display=bgS.value==='color'?'block':'none';bgHint();inv();render()};
+bgC.oninput=()=>{inv();render()};
+esS.onchange=()=>{exp();draw()};
+
+function bindS(s,l){s.oninput=()=>{l.textContent=Math.round(+s.value);inv();dSel();sch()}}
+bindS(scS,scV);bindS(rtS,rtV);
+
+cnS.oninput=()=>{S=s2S(+cnS.value);per();exp();inv();dSel();sch()};
+
+let hT=null;
+function sch(){if(hT)clearTimeout(hT);hT=setTimeout(()=>{hT=null;draw();dTh();pPrev()},90)}
+
+function cp(e){
+  const r=slc.getBoundingClientRect(),s=slc.width/r.width;
+  const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+  const cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+  return{x:cx*s,y:cy*s};
+}
+function sp(e){
+  if(!img)return;e.preventDefault();
+  const p=cp(e);ps={x:p.x,y:p.y,c:{...vc}};
+}
+function mp(e){
+  if(!ps||!img)return;e.preventDefault();
+  const p=cp(e),r=slc.getBoundingClientRect(),s=slc.width/r.width;
+  const dx=(p.x-ps.x)/s,dy=(p.y-ps.y)/s;
+  const w=Math.min(slc.width,slc.height)-20;
+  const ds=w/sIF(img),rad=+rtS.value*Math.PI/180,co=Math.cos(rad),si=Math.sin(rad);
+  const ix=(dx*co+dy*si)/ds,iy=(-dx*si+dy*co)/ds;
+  vc={x:ps.c.x-ix,y:ps.c.y-iy};
+  inv();dSel();sch();
+}
+function ep(){ps=null}
+slc.addEventListener('mousedown',sp);
+window.addEventListener('mousemove',mp);
+window.addEventListener('mouseup',ep);
+slc.addEventListener('touchstart',sp,{passive:false});
+slc.addEventListener('touchmove',mp,{passive:false});
+slc.addEventListener('touchend',ep);
+
+// ==== ФОН ====
+function cr(iw,ih,w,h,p=.98){
+  const s=Math.min(w/iw,h/ih)*p,dw=iw*s,dh=ih*s;
+  return{dx:(w-dw)/2,dy:(h-dh)/2,dw,dh};
+}
+
+function cham(id,W,H){
+  const d=id.data,N=W*H,INF=0x7fffffff;
+  const dist=new Int32Array(N),si=new Int32Array(N);
+  for(let i=0;i<N;i++){if(d[i*4+3]>0){dist[i]=0;si[i]=i}else{dist[i]=INF;si[i]=-1}}
+  const D1=100,D2=141;
+  for(let y=0;y<H;y++){const r=y*W;
+    for(let x=0;x<W;x++){const i=r+x;if(dist[i]===0)continue;
+      let b=dist[i],bs=si[i];
+      if(x>0){const j=i-1,dd=dist[j]+D1;if(dd<b){b=dd;bs=si[j]}}
+      if(y>0){const j=i-W,dd=dist[j]+D1;if(dd<b){b=dd;bs=si[j]}}
+      if(x>0&&y>0){const j=i-W-1,dd=dist[j]+D2;if(dd<b){b=dd;bs=si[j]}}
+      if(x<W-1&&y>0){const j=i-W+1,dd=dist[j]+D2;if(dd<b){b=dd;bs=si[j]}}
+      dist[i]=b;si[i]=bs;
+    }
+  }
+  for(let y=H-1;y>=0;y--){const r=y*W;
+    for(let x=W-1;x>=0;x--){const i=r+x;if(dist[i]===0)continue;
+      let b=dist[i],bs=si[i];
+      if(x<W-1){const j=i+1,dd=dist[j]+D1;if(dd<b){b=dd;bs=si[j]}}
+      if(y<H-1){const j=i+W,dd=dist[j]+D1;if(dd<b){b=dd;bs=si[j]}}
+      if(x<W-1&&y<H-1){const j=i+W+1,dd=dist[j]+D2;if(dd<b){b=dd;bs=si[j]}}
+      if(x>0&&y<H-1){const j=i+W-1,dd=dist[j]+D2;if(dd<b){b=dd;bs=si[j]}}
+      dist[i]=b;si[i]=bs;
+    }
+  }
+  for(let i=0;i<N;i++){if(d[i*4+3]>0)continue;const s=si[i];if(s<0)continue;
+    d[i*4]=d[s*4];d[i*4+1]=d[s*4+1];d[i*4+2]=d[s*4+2];d[i*4+3]=255;
+  }
+}
+
+function dIT(x,sp_,i){
+  if(!i)return;
+  const sd=sIF(i);let ds=sp_/sd;
+  if(ds>MDS)ds=MDS;if(ds<.01)ds=.01;
+  const r=+rtS.value*Math.PI/180;
+  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+  x.translate(sp_/2,sp_/2);x.rotate(r);x.scale(ds,ds);x.translate(-vc.x,-vc.y);
+  x.drawImage(i,0,0);x.restore();
+}
+
+function bEW(sp_,i){
+  const SM=Math.min(160,sp_),o=document.createElement('canvas');
+  o.width=o.height=SM;const x=o.getContext('2d');
+  const{dx,dy,dw,dh}=cr(i.width,i.height,SM,SM);
+  x.drawImage(i,dx,dy,dw,dh);
+  const id=x.getImageData(0,0,SM,SM);cham(id,SM,SM);x.putImageData(id,0,0);
+  const out=document.createElement('canvas');out.width=out.height=sp_;
+  const ox=out.getContext('2d');ox.imageSmoothingEnabled=true;ox.imageSmoothingQuality='high';
+  ox.drawImage(o,0,0,sp_,sp_);return out;
+}
+
+function bER(sp_,i){
+  const SM=Math.min(160,sp_),o=document.createElement('canvas');
+  o.width=o.height=SM;const x=o.getContext('2d');
+  const k=SM/sp_,sd=sIF(i);let ds=sp_/sd*k;
+  if(ds>MDS*k)ds=MDS*k;if(ds<.01*k)ds=.01*k;
+  const r=+rtS.value*Math.PI/180;
+  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+  x.translate(SM/2,SM/2);x.rotate(r);x.scale(ds,ds);x.translate(-vc.x,-vc.y);
+  x.drawImage(i,0,0);x.restore();
+  const id=x.getImageData(0,0,SM,SM);cham(id,SM,SM);x.putImageData(id,0,0);
+  const out=document.createElement('canvas');out.width=out.height=sp_;
+  const ox=out.getContext('2d');ox.imageSmoothingEnabled=true;ox.imageSmoothingQuality='high';
+  ox.drawImage(o,0,0,sp_,sp_);return out;
+}
+
+function bMW(sp_,i){
+  const o=document.createElement('canvas');o.width=o.height=sp_;
+  const x=o.getContext('2d');
+  const{dx,dy,dw,dh}=cr(i.width,i.height,sp_,sp_);
+  x.drawImage(i,dx,dy,dw,dh);
+  if(dy>0){x.save();x.translate(dx,dy);x.scale(1,-1);x.drawImage(i,0,0,i.width,i.height,0,-dy,dw,dy);x.restore()}
+  if(dy+dh<sp_){const b=sp_-(dy+dh);x.save();x.translate(dx,dy+dh);x.scale(1,-1);x.drawImage(i,0,0,i.width,i.height,0,-b,dw,b);x.restore()}
+  if(dx>0){x.save();x.translate(dx,dy);x.scale(-1,1);x.drawImage(i,0,0,i.width,i.height,-dx,0,dx,dh);x.restore()}
+  if(dx+dw<sp_){const r=sp_-(dx+dw);x.save();x.translate(dx+dw,dy);x.scale(-1,1);x.drawImage(i,0,0,i.width,i.height,0,0,r,dh);x.restore()}
+  return o;
+}
+
+function bMR(sp_,i){
+  const SM=Math.min(160,sp_),o=document.createElement('canvas');
+  o.width=o.height=SM;const x=o.getContext('2d');
+  const k=SM/sp_,sd=sIF(i);let ds=sp_/sd*k;
+  if(ds>MDS*k)ds=MDS*k;if(ds<.01*k)ds=.01*k;
+  const r=+rtS.value*Math.PI/180;
+  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+  x.translate(SM/2,SM/2);x.rotate(r);x.scale(ds,ds);x.translate(-vc.x,-vc.y);
+  x.drawImage(i,0,0);x.restore();
+  const id=x.getImageData(0,0,SM,SM),d=id.data;
+  let mnX=SM,mnY=SM,mxX=-1,mxY=-1;
+  for(let y=0;y<SM;y++)for(let X=0;X<SM;X++){
+    if(d[(y*SM+X)*4+3]>0){if(X<mnX)mnX=X;if(X>mxX)mxX=X;if(y<mnY)mnY=y;if(y>mxY)mxY=y}
+  }
+  if(mxX<0)return o;
+  const tmp=document.createElement('canvas');tmp.width=tmp.height=SM;
+  tmp.getContext('2d').drawImage(o,0,0);
+  const dr=(sx,sy,sw,sh,ddx,ddy,ddw,ddh,fx,fy)=>{
+    x.save();x.translate(ddx+(fx?ddw:0),ddy+(fy?ddh:0));x.scale(fx?-1:1,fy?-1:1);
+    x.drawImage(tmp,sx,sy,sw,sh,0,0,ddw,ddh);x.restore();
+  };
+  const bw=mxX-mnX+1,bh=mxY-mnY+1;
+  if(mnY>0)dr(mnX,mnY,bw,Math.min(mnY,bh),0,0,SM,mnY,false,true);
+  if(mxY<SM-1){const sh=Math.min(SM-1-mxY,bh);dr(mnX,mxY+1-sh,bw,sh,0,mxY+1,SM,SM-1-mxY,false,true)}
+  if(mnX>0)dr(mnX,mnY,Math.min(mnX,bw),bh,0,0,mnX,SM,true,false);
+  if(mxX<SM-1){const sw=Math.min(SM-1-mxX,bw);dr(mxX+1-sw,mnY,sw,bh,mxX+1,0,SM-1-mxX,SM,true,false)}
+  const out=document.createElement('canvas');out.width=out.height=sp_;
+  const ox=out.getContext('2d');ox.imageSmoothingEnabled=true;ox.imageSmoothingQuality='high';
+  ox.drawImage(o,0,0,sp_,sp_);return out;
+}
+
+function dEB(x,w,h,i){
+  const m=bgS.value;
+  if(m==='checker')return;
+  if(m==='color'){x.fillStyle=bgC.value;x.fillRect(0,0,w,h);return}
+  if(!i)return;
+  if(m==='blur'){
+    const{dx,dy,dw,dh}=cr(i.width,i.height,w,h);
+    const b=Math.max(4,Math.min(w,h)*.08);
+    x.save();x.filter=`blur(${b}px)`;x.drawImage(i,dx,dy,dw,dh);x.filter='none';x.restore();return;
+  }
+  const k=(i===src?'o':'w')+'|'+m+'|'+w+'x'+h+'|'+vc.x.toFixed(2)+','+vc.y.toFixed(2)+'|'+scS.value+'|'+rtS.value;
+  if(eC.k===k&&eC.c){x.drawImage(eC.c,0,0,w,h);return}
+  let b=null;
+  if(m==='edge')b=bEW(w,i);
+  else if(m==='edge-region')b=bER(w,i);
+  else if(m==='mirror')b=bMW(w,i);
+  else if(m==='mirror-region')b=bMR(w,i);
+  if(b){eC.k=k;eC.c=b;x.drawImage(b,0,0,w,h)}
+}
+
+function dChk(x,w,h){
+  const c=12;
+  for(let y=0;y<h;y+=c)for(let X=0;X<w;X+=c){
+    x.fillStyle=((Math.round(X/c)+Math.round(y/c))%2===0)?'#7a7a7a':'#9a9a9a';
+    x.fillRect(X,y,c,c);
+  }
+}
+
+function dSI(x,sp_,i){
+  if(!i)return;
+  dEB(x,sp_,sp_,i);dIT(x,sp_,i);
+}
+
+function bT(sp_,i){
+  const k=sp_+'|'+(i===src?'o':'w')+'|'+(i?i.width:0)+'|'+vc.x+'|'+vc.y+'|'+rtS.value+'|'+scS.value+'|'+bgS.value+'|'+bgC.value;
+  if(tC.k===k&&tC.c)return tC.c;
+  const c=document.createElement('canvas');c.width=c.height=sp_;
+  dSI(c.getContext('2d'),sp_,i);
+  tC.k=k;tC.c=c;return c;
+}
+
+// ==== БИЛДЕРЫ ====
+function vtx(c,k,s){const a=(-90+k*60)*Math.PI/180;return{x:c.x+s*Math.cos(a),y:c.y+s*Math.sin(a)}}
+function eMd(c,k,s){const a=vtx(c,k,s),b=vtx(c,k+1,s);return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
+function rP(p,c,e){
+  const dx=e.x-c.x,dy=e.y-c.y,l=Math.hypot(dx,dy);
+  if(l<1e-9)return{x:p.x,y:p.y};
+  const ux=dx/l,uy=dy/l,vx=p.x-c.x,vy=p.y-c.y;
+  const pr=vx*ux+vy*uy,px=vx-pr*ux,py=vy-pr*uy;
+  return{x:c.x+pr*ux-px,y:c.y+pr*uy-py};
+}
+function rotP(p,c,a){const dx=p.x-c.x,dy=p.y-c.y,co=Math.cos(a),si=Math.sin(a);return{x:c.x+dx*co-dy*si,y:c.y+dx*si+dy*co}}
+
+function smp(d,w,h,x,y,out,oi){
+  if(x<0)x=0;if(x>w-1)x=w-1;if(y<0)y=0;if(y>h-1)y=h-1;
+  const x0=Math.floor(x),y0=Math.floor(y);
+  const x1=Math.min(x0+1,w-1),y1=Math.min(y0+1,h-1);
+  const fx=x-x0,fy=y-y0;
+  const i00=(y0*w+x0)*4,i10=(y0*w+x1)*4,i01=(y1*w+x0)*4,i11=(y1*w+x1)*4;
+  const w00=(1-fx)*(1-fy),w10=fx*(1-fy),w01=(1-fx)*fy,w11=fx*fy;
+  for(let c=0;c<4;c++)out[oi+c]=d[i00+c]*w00+d[i10+c]*w10+d[i01+c]*w01+d[i11+c]*w11;
+}
+
+// Универсальный билдер симметрии: секторов N, поворот STEP, отражение через edgeMid/vertex.
+function bSym(t,W,H,c,s,sec,step,useEdge){
+  const tw=t.width,th=t.height;
+  const td=t.getContext('2d').getImageData(0,0,tw,th).data;
+  const b0=useEdge?eMd(c,0,s):vtx(c,0,s);
+  const b1=useEdge?vtx(c,0,s):vtx(c,1,s);
+  const ax=(b0.x-c.x)/s,ay=(b0.y-c.y)/s;
+  const bx=(b1.x-c.x)/s,by=(b1.y-c.y)/s;
+  const det=ax*by-bx*ay;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');
+  const oi=ox.createImageData(W,H),od=oi.data;
+  const ba=-90*Math.PI/180;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=x-c.x,dy=y-c.y,idx=(y*W+x)*4;
+    let a=Math.atan2(dy,dx)-ba;a=((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+    let k=Math.floor(a/sec);if(k>Math.round(2*Math.PI/sec)-1)k=Math.round(2*Math.PI/sec)-1;if(k<0)k=0;
+    let p={x,y};
+    p=rotP(p,c,-Math.floor(k/2)*step);
+    if(k%2===1)p=rP(p,c,b1);
+    const px=p.x-c.x,py=p.y-c.y;
+    const tX=(px*by-py*bx)/det,tY=(py*ax-px*ay)/det;
+    if(tX<-.6||tY<-.6||tX+tY>s+.6)continue;
+    smp(td,tw,th,tX,tY,od,idx);
+  }
+  ox.putImageData(oi,0,0);return out;
+}
+
+function bSq4(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const td=t.getContext('2d').getImageData(0,0,tw,th).data;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');const oi=ox.createImageData(W,H),od=oi.data;
+  const SEC=Math.PI/2,hl=s/2;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=x-c.x,dy=y-c.y,idx=(y*W+x)*4;
+    let a=Math.atan2(dy,dx);a=((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+    let k=Math.floor(a/SEC);if(k>3)k=3;if(k<0)k=0;
+    let p=rotP({x,y},c,-k*SEC);
+    const px=p.x-c.x,py=p.y-c.y;
+    if(px<0||py<0||px>hl||py>hl)continue;
+    smp(td,tw,th,(px/hl)*tw,(py/hl)*th,od,idx);
+  }
+  ox.putImageData(oi,0,0);return out;
+}
+
+function bTr(t,W,H,c,s,sec,step){
+  const tw=t.width,th=t.height;
+  const td=t.getContext('2d').getImageData(0,0,tw,th).data;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');const oi=ox.createImageData(W,H),od=oi.data;
+  const hl=s/2;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=x-c.x,dy=y-c.y,idx=(y*W+x)*4;
+    let a=Math.atan2(dy,dx);a=((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+    let k=Math.floor(a/sec);const mx=Math.round(2*Math.PI/sec)-1;if(k>mx)k=mx;if(k<0)k=0;
+    let p=rotP({x,y},c,-Math.floor(k/2)*step);
+    if(k%2===1)p={x:p.x,y:c.y-(p.y-c.y)};
+    const px=p.x-c.x,py=p.y-c.y;
+    const tX=px+hl,tY=py+hl;
+    if(tX<0||tY<0||tX>s||tY>s)continue;
+    smp(td,tw,th,(tX/s)*tw,(tY/s)*th,od,idx);
+  }
+  ox.putImageData(oi,0,0);return out;
+}
+
+function bKal(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const td=t.getContext('2d').getImageData(0,0,tw,th).data;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');const oi=ox.createImageData(W,H),od=oi.data;
+  const SEC=Math.PI/4,hl=s/2,bis=Math.PI/8,co=Math.cos(-bis),si=Math.sin(-bis);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=x-c.x,dy=y-c.y,idx=(y*W+x)*4;
+    let a=Math.atan2(dy,dx);a=((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+    let k=Math.floor(a/SEC);if(k>7)k=7;if(k<0)k=0;
+    const p=rotP({x,y},c,-k*SEC);
+    const px=p.x-c.x,py=p.y-c.y;
+    let rx=px*co-py*si,ry=px*si+py*co;
+    rx=rx<0?-rx:rx;ry=ry<0?-ry:ry;
+    smp(td,tw,th,Math.min(tw-1,(rx/hl)*tw),Math.min(th-1,(ry/hl)*th),od,idx);
+  }
+  ox.putImageData(oi,0,0);return out;
+}
+
+function bR180(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const td=t.getContext('2d').getImageData(0,0,tw,th).data;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');const oi=ox.createImageData(W,H),od=oi.data;
+  const hl=s/2;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=x-c.x,dy=y-c.y,idx=(y*W+x)*4;
+    let px=dx,py=dy;if(px<0||py<0){px=-px;py=-py}
+    const tX=px+hl,tY=py+hl;
+    if(tX<0||tY<0||tX>s||tY>s)continue;
+    smp(td,tw,th,(tX/s)*tw,(tY/s)*th,od,idx);
+  }
+  ox.putImageData(oi,0,0);return out;
+}
+
+function bGl(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const td=t.getContext('2d').getImageData(0,0,tw,th).data;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');const oi=ox.createImageData(W,H),od=oi.data;
+  const rp=Math.max(1,Math.round(s/4));
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const idx=(y*W+x)*4;
+    const row=Math.floor((y-c.y)/rp);
+    let px=x-c.x,py=y-c.y;if(row%2===1)px=-px;
+    const tX=((px+s*1000)%s+s)%s,tY=((py+s*1000)%s+s)%s;
+    smp(td,tw,th,(tX/s)*tw,(tY/s)*th,od,idx);
+  }
+  ox.putImageData(oi,0,0);return out;
+}
+
+function bPMM(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const td=t.getContext('2d').getImageData(0,0,tw,th).data;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');const oi=ox.createImageData(W,H),od=oi.data;
+  const hl=s/2;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const idx=(y*W+x)*4;
+    let px=x-c.x,py=y-c.y;if(px<0)px=-px;if(py<0)py=-py;
+    const tX=px+hl,tY=py+hl;
+    if(tX<0||tY<0||tX>s||tY>s)continue;
+    smp(td,tw,th,Math.min(tw-1,(tX/s)*tw),Math.min(th-1,(tY/s)*th),od,idx);
+  }
+  ox.putImageData(oi,0,0);return out;
+}
+
+function bPen(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const td=t.getContext('2d').getImageData(0,0,tw,th).data;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');const oi=ox.createImageData(W,H),od=oi.data;
+  const SEC=Math.PI/5,hl=s/2;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=x-c.x,dy=y-c.y,idx=(y*W+x)*4;
+    let a=Math.atan2(dy,dx);a=((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+    let k=Math.floor(a/SEC);if(k>9)k=9;if(k<0)k=0;
+    const p=rotP({x,y},c,-k*SEC);
+    let px=p.x-c.x,py=p.y-c.y;if(py<0)py=-py;
+    smp(td,tw,th,Math.min(tw-1,(Math.min(px,hl)/hl)*tw),Math.min(th-1,(Math.min(py,hl)/hl)*th),od,idx);
+  }
+  ox.putImageData(oi,0,0);return out;
+}
+
+function bHat(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const td=t.getContext('2d').getImageData(0,0,tw,th).data;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');const oi=ox.createImageData(W,H),od=oi.data;
+  const SEC=Math.PI/3,hl=s/2;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=x-c.x,dy=y-c.y,idx=(y*W+x)*4;
+    let a=Math.atan2(dy,dx)-Math.PI/6;a=((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+    let k=Math.floor(a/SEC);if(k>5)k=5;if(k<0)k=0;
+    const p=rotP({x,y},c,-k*SEC);
+    const ra=k*SEC,co=Math.cos(-ra),si=Math.sin(-ra);
+    const vx=p.x-c.x,vy=p.y-c.y;
+    const rx=vx*co-vy*si,ry=vx*si+vy*co;
+    const px=rx<0?-rx:rx,py=ry<0?-ry:ry;
+    smp(td,tw,th,Math.min(tw-1,(Math.min(px,hl)/hl)*tw),Math.min(th-1,(Math.min(py,hl)/hl)*th),od,idx);
+  }
+  ox.putImageData(oi,0,0);return out;
+}
+
+function bPin(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const td=t.getContext('2d').getImageData(0,0,tw,th).data;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');const oi=ox.createImageData(W,H),od=oi.data;
+  const PHI=(1+Math.sqrt(5))/2,SEC=Math.PI*2/10;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=x-c.x,dy=y-c.y,idx=(y*W+x)*4;
+    let a=Math.atan2(dy,dx);a=((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+    let k=Math.floor(a/SEC);if(k>9)k=9;if(k<0)k=0;
+    const sK=Math.pow(1/PHI,k);
+    const p=rotP({x,y},c,-k*SEC);
+    const px=(p.x-c.x)/sK,py=(p.y-c.y)/sK;
+    const tX=((px+s*1000)%s+s)%s,tY=((py+s*1000)%s+s)%s;
+    smp(td,tw,th,(tX/s)*tw,(tY/s)*th,od,idx);
+  }
+  ox.putImageData(oi,0,0);return out;
+}
+
+function bTr2(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');
+  const sd=i=>{const x=Math.sin(i*12.9898)*43758.5453;return x-Math.floor(x)};
+  const cl=s/2,nc=Math.ceil(W/cl)+2,nr=Math.ceil(H/cl)+2;
+  for(let r=-1;r<nr;r++)for(let co=-1;co<nc;co++){
+    const id=(r*73856093)^(co*19349663);
+    const ro=Math.floor(sd(id)*4)*Math.PI/2;
+    const fl2=sd(id*7)>.5;
+    const dx=co*cl,dy=r*cl;
+    ox.save();ox.translate(dx+cl/2,dy+cl/2);ox.rotate(ro);
+    if(fl2)ox.scale(-1,1);
+    ox.drawImage(t,0,0,tw,th,-cl/2,-cl/2,cl,cl);ox.restore();
+  }
+  return out;
+}
+
+function bMoi(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');
+  const st=s,n=Math.ceil(Math.max(W,H)/st)+2;
+  for(let i=-n;i<n;i++)for(let j=-n;j<n;j++)ox.drawImage(t,i*st,j*st,tw,th);
+  ox.save();ox.globalAlpha=.5;ox.translate(W/2,H/2);ox.rotate(.05);ox.translate(-W/2,-H/2);
+  for(let i=-n;i<n;i++)for(let j=-n;j<n;j++)ox.drawImage(t,i*st,j*st,tw,th);
+  ox.restore();return out;
+}
+
+function bVor(t,W,H,c,s){
+  const tw=t.width,th=t.height;
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const ox=out.getContext('2d');
+  const sd=i=>{const x=Math.sin(i*78.233)*43758.5453;return x-Math.floor(x)};
+  const cl=s,nc=Math.ceil(W/cl)+2,nr=Math.ceil(H/cl)+2;
+  const cs=[];
+  for(let r=-1;r<nr;r++)for(let co=-1;co<nc;co++){
+    const id=(r*73856093)^(co*19349663);
+    const jx=(sd(id)-.5)*cl*.4,jy=(sd(id*3)-.5)*cl*.4;
+    const ro=sd(id*5)*Math.PI*2;
+    cs.push({dx:co*cl+jx,dy:r*cl+jy,ro,id});
+  }
+  cs.sort((a,b)=>a.id-b.id);
+  for(const d of cs){
+    ox.save();ox.translate(d.dx+cl/2,d.dy+cl/2);ox.rotate(d.ro);
+    ox.drawImage(t,0,0,tw,th,-cl/2,-cl/2,cl,cl);ox.restore();
+  }
+  return out;
+}
+
+function bMirB(t,uM){
+  const s=t.width;
+  if(!uM)return t;
+  const b=document.createElement('canvas');b.width=b.height=s*2;
+  const x=b.getContext('2d');
+  x.drawImage(t,0,0);
+  x.save();x.translate(s*2,0);x.scale(-1,1);x.drawImage(t,0,0);x.restore();
+  x.save();x.translate(0,s*2);x.scale(1,-1);x.drawImage(t,0,0);x.restore();
+  x.save();x.translate(s*2,s*2);x.scale(-1,-1);x.drawImage(t,0,0);x.restore();
+  return b;
+}
+
+function bPE(m,t,W,H,c,s){
+  if(m==='hexagon')return bSym(t,W,H,c,s,Math.PI/3,2*Math.PI/3,false);
+  if(m==='hexagon12')return bSym(t,W,H,c,s,Math.PI/6,Math.PI/3,true);
+  if(m==='square8')return bSym(t,W,H,c,s,Math.PI/4,Math.PI/2,false);
+  if(m==='square4')return bSq4(t,W,H,c,s);
+  if(m==='triangle6')return bTr(t,W,H,c,s,Math.PI/3,2*Math.PI/3);
+  if(m==='triangle12')return bTr(t,W,H,c,s,Math.PI/6,Math.PI/3);
+  if(m==='kaleido')return bKal(t,W,H,c,s);
+  if(m==='rot180')return bR180(t,W,H,c,s);
+  if(m==='glide')return bGl(t,W,H,c,s);
+  if(m==='pmm')return bPMM(t,W,H,c,s);
+  if(m==='penrose')return bPen(t,W,H,c,s);
+  if(m==='hat')return bHat(t,W,H,c,s);
+  if(m==='pinwheel')return bPin(t,W,H,c,s);
+  if(m==='truchet')return bTr2(t,W,H,c,s);
+  if(m==='moire')return bMoi(t,W,H,c,s);
+  if(m==='voronoi')return bVor(t,W,H,c,s);
+  return bMirB(t,m==='mirror');
+}
+
+function dPShape(x,ox,oy,w,m){
+  const px=oy+w*.08,iw=w-px*2;
+  const cx0=ox+w/2,cy0=oy+w/2;
+  const pts=[];
+  const sec=(a1,a2)=>{pts.push([0,0],[Math.cos(a1*Math.PI/180),Math.sin(a1*Math.PI/180)],[Math.cos(a2*Math.PI/180),Math.sin(a2*Math.PI/180)])};
+  if(m==='hexagon'||m==='triangle6'||m==='hat')sec(-90,-30);
+  else if(m==='hexagon12'||m==='triangle12')sec(-90,-60);
+  else if(m==='square8'||m==='kaleido')pts.push([0,0],[1,0],[1,-1]);
+  else if(m==='square4')pts.push([0,0],[1,0],[1,1],[0,1]);
+  else if(m==='mirror'||m==='pmm'||m==='truchet')pts.push([-1,-1],[0,-1],[0,0],[-1,0]);
+  else if(m==='rot180')pts.push([-1,-1],[1,-1],[1,0],[-1,0]);
+  else if(m==='glide')pts.push([-1,-1],[1,-1],[1,-.5],[-1,-.5]);
+  else if(m==='penrose'||m==='pinwheel')sec(-90,-54);
+  else pts.push([-1,-1],[1,-1],[1,1],[-1,1]);
+  let mnX=Infinity,mxX=-Infinity,mnY=Infinity,mxY=-Infinity;
+  for(const[a,b]of pts){if(a<mnX)mnX=a;if(a>mxX)mxX=a;if(b<mnY)mnY=b;if(b>mxY)mxY=b}
+  const fw=mxX-mnX,fh=mxY-mnY,fcx=(mnX+mxX)/2,fcy=(mnY+mxY)/2;
+  const sc=Math.min(iw/fw,iw/fh);
+  const p=new Path2D();
+  pts.forEach(([a,b],i)=>{
+    const sx=cx0+(a-fcx)*sc,sy=cy0+(b-fcy)*sc;
+    if(i===0)p.moveTo(sx,sy);else p.lineTo(sx,sy);
+  });
+  p.closePath();
+  x.save();const o=new Path2D();o.rect(0,0,x.canvas.width,x.canvas.height);o.addPath(p);
+  x.fillStyle='rgba(0,0,0,.65)';x.fill(o,'evenodd');x.restore();
+  x.save();x.strokeStyle='#4da6ff';x.lineWidth=2;x.stroke(p);x.restore();
+}
+
+function dSel(){
+  const x=slc.getContext('2d'),cw=slc.width,ch=slc.height;
+  x.clearRect(0,0,cw,ch);x.fillStyle='#101216';x.fillRect(0,0,cw,ch);
+  if(!img)return;
+  const w=Math.min(cw,ch)-20,ox=(cw-w)/2,oy=(ch-w)/2;
+  if(bgS.value==='checker'){x.save();x.beginPath();x.rect(ox,oy,w,w);x.clip();dChk(x,cw,ch);x.restore()}
+  else if(bgS.value==='color'){x.fillStyle=bgC.value;x.fillRect(ox,oy,w,w)}
+  const tmp=document.createElement('canvas');tmp.width=tmp.height=w;
+  dSI(tmp.getContext('2d'),w,img);x.drawImage(tmp,ox,oy);
+  x.strokeStyle='#4da6ff88';x.lineWidth=1;x.setLineDash([3,3]);x.strokeRect(ox,oy,w,w);x.setLineDash([]);
+  dPShape(x,ox,oy,w,md);
+}
+
+function per(m,s){
+  if(m==='hexagon'||m==='hexagon12')return{px:s*Math.sqrt(3),py:3*s};
+  if(m==='mirror')return{px:2*s,py:2*s};
+  return{px:s,py:s};
+}
+function cnt(){const p=per(md,S);const w=pc.width;return{nX:Math.max(1,Math.round(w/p.px)),nY:Math.max(1,Math.round(w/p.py))}}
+function expP(t){
+  const{nX,nY}=cnt(),ih=md==='hexagon'||md==='hexagon12';
+  const f=md==='mirror'?2:1;
+  if(ih){
+    const s=(t/(Math.sqrt(3)*nX)+t/(3*nY))/2;
+    return{w:Math.round(s*Math.sqrt(3)*nX),h:Math.round(3*s*nY),nX,nY,s};
+  }
+  const sI=Math.max(1,Math.round(t/(nX*f)));
+  return{w:nX*sI*f,h:nY*sI*f,nX,nY,s:sI};
+}
+function perUpd(){const{nX,nY}=cnt();cnV.textContent=`${nX} × ${nY}`}
+function exp(){const t=+esS.value,e=expP(t);el.innerHTML=`${e.nX} × ${e.nY} tiles → ${e.w}×${e.h}`}
+function bgHint(){
+  const h={checker:'Transparent checkerboard — outside is transparent in PNG.',color:'Fill outside with solid color.',blur:'Blurred stretched copy.',edge:'Stretch outermost pixels (contain).','edge-region':'Stretch outermost of visible region.',mirror:'Reflect whole image outwards.','mirror-region':'Reflect edges of visible region.'};
+  bgH.textContent=h[bgS.value]||'';
+}
+
+let ttT=null;
+document.querySelectorAll('[data-tip]').forEach(e=>{
+  e.onmouseenter=()=>{
+    if(ttT)clearTimeout(ttT);
+    ttT=setTimeout(()=>{
+      tt.textContent=e.getAttribute('data-tip');
+      const r=e.getBoundingClientRect(),tw=260;
+      let l=r.left+r.width/2-tw/2,t=r.top-8;
+      if(l<8)l=8;
+      if(l+tw>window.innerWidth-8)l=window.innerWidth-tw-8;
+      tt.classList.remove('bt');
+      if(t<40){t=r.bottom+8;tt.classList.add('bt')}
+      else{const th=tt.offsetHeight||60;t=r.top-th-8;if(t<8){t=r.bottom+8;tt.classList.add('bt')}}
+      tt.style.left=l+'px';tt.style.top=t+'px';tt.classList.add('v');
+    },250);
+  };
+  e.onmouseleave=()=>{if(ttT)clearTimeout(ttT);tt.classList.remove('v')};
+});
+
+function dTh(){
+  if(!img)return;
+  tx.clearRect(0,0,64,64);
+  const t=bT(Math.max(8,Math.min(S,256)),img);
+  const c={x:S/2,y:S/2};
+  let e;
+  if(md==='truchet'||md==='moire'||md==='voronoi')e=bPE(md,t,64,64,{x:32,y:32},S);
+  else if(md==='hexagon'||md==='hexagon12'){
+    const bw=Math.ceil(S*Math.sqrt(3)*1.1),bh=Math.ceil(S*2.05);
+    e=bPE(md,t,bw,bh,{x:bw/2,y:bh/2},S);
+  }
+  else if(md==='mirror'||md==='grid')e=bMirB(t,md==='mirror');
+  else e=bPE(md,t,S,S,c,S);
+  const sc=Math.min(64/e.width,64/e.height),dw=e.width*sc,dh=e.height*sc;
+  tx.drawImage(e,(64-dw)/2,(64-dh)/2,dw,dh);
+}
+
+function pPrev(){
+  ppx.clearRect(0,0,60,60);ppx.fillStyle='#000';ppx.fillRect(0,0,60,60);
+  if(!img)return;
+  const sS=S;S=24;
+  try{
+    const t=bT(24,img),c={x:12,y:12};
+    let e;
+    if(md==='truchet'||md==='moire'||md==='voronoi')e=bPE(md,t,60,60,{x:30,y:30},24);
+    else if(md==='hexagon'||md==='hexagon12'){
+      const bw=Math.ceil(24*Math.sqrt(3)*1.1),bh=Math.ceil(24*2.05);
+      e=bPE(md,t,bw,bh,{x:bw/2,y:bh/2},24);
+    }
+    else if(md==='mirror'||md==='grid')e=bMirB(t,md==='mirror');
+    else e=bPE(md,t,24,24,c,24);
+    const sc=Math.min(60/e.width,60/e.height),dw=e.width*sc,dh=e.height*sc;
+    ppx.drawImage(e,(60-dw)/2,(60-dh)/2,dw,dh);
+  }finally{S=sS}
+}
+
+function pPat(x,W,H,m,t,oNX,oNY){
+  x.clearRect(0,0,W,H);
+  if(bgS.value==='checker')dChk(x,W,H);
+  const c=(oNX!=null&&oNY!=null)?{nX:oNX,nY:oNY}:cnt();
+  if(m==='hexagon'||m==='hexagon12'){
+    const bw=Math.ceil(S*Math.sqrt(3)*1.1),bh=Math.ceil(S*2.05),bc={x:bw/2,y:bh/2};
+    const ht=bPE(m,t,bw,bh,bc,S);
+    const stX=S*Math.sqrt(3),stY=1.5*S;
+    const nC=Math.ceil(W/stX)+4,nR=Math.ceil(H/stY)+4;
+    for(let r=-3;r<nR;r++){
+      const hy=r*stY,xs=(r%2===0)?0:stX/2;
+      for(let co=-3;co<nC;co++)x.drawImage(ht,Math.round(co*stX+xs-bc.x),Math.round(hy-bc.y));
+    }
+    return;
+  }
+  if(m==='truchet'||m==='moire'||m==='voronoi'){x.drawImage(bPE(m,t,W,H,{x:W/2,y:H/2},S),0,0);return}
+  const cc={x:S/2,y:S/2};
+  let st;
+  if(m==='mirror'||m==='grid')st=bMirB(t,m==='mirror');
+  else st=bPE(m,t,S,S,cc,S);
+  const xs=[],ys=[];
+  for(let i=0;i<=c.nX;i++)xs.push(Math.round(i*W/c.nX));
+  for(let j=0;j<=c.nY;j++)ys.push(Math.round(j*H/c.nY));
+  for(let j=0;j<c.nY;j++)for(let i=0;i<c.nX;i++)
+    x.drawImage(st,0,0,st.width,st.height,xs[i],ys[j],xs[i+1]-xs[i],ys[j+1]-ys[j]);
+}
+
+let rp=false;
+function render(){
+  if(rp)return;rp=true;
+  requestAnimationFrame(()=>{rp=false;dSel();draw();perUpd();exp();dTh()});
+}
+
+function draw(){
+  if(!img)return;
+  const W=pc.width,H=pc.height,t=+esS.value,e=expP(t);
+  const ck=e.w+'x'+e.h+'|'+md;
+  let o;
+  if(oC.k===ck&&oC.c&&oC.c.width===e.w&&oC.c.height===e.h){o=oC.c;o.getContext('2d').clearRect(0,0,e.w,e.h)}
+  else{o=document.createElement('canvas');o.width=e.w;o.height=e.h;oC.k=ck;oC.c=o}
+  const tE=bT(e.s,img),sS=S;S=e.s;
+  try{pPat(o.getContext('2d'),e.w,e.h,md,tE,e.nX,e.nY)}finally{S=sS}
+  px.clearRect(0,0,W,H);
+  if(bgS.value==='checker')dChk(px,W,H);
+  else if(bgS.value==='color'){px.fillStyle=bgC.value;px.fillRect(0,0,W,H)}
+  else{px.fillStyle='#000';px.fillRect(0,0,W,H)}
+  const sc=Math.min(W/e.w,H/e.h),dw=e.w*sc,dh=e.h*sc,dx=(W-dw)/2,dy=(H-dh)/2;
+  px.imageSmoothingEnabled=true;px.imageSmoothingQuality='high';
+  px.drawImage(o,dx,dy,dw,dh);
+}
+
+function cTGA(c){
+  const w=c.width,h=c.height,s=c.getContext('2d').getImageData(0,0,w,h).data;
+  const hd=new Uint8Array(18);
+  hd[2]=2;hd[12]=w&255;hd[13]=(w>>8)&255;hd[14]=h&255;hd[15]=(h>>8)&255;hd[16]=32;hd[17]=0x28;
+  const p=new Uint8Array(w*h*4);
+  for(let i=0;i<w*h;i++){const si=i*4;p[si]=s[si+2];p[si+1]=s[si+1];p[si+2]=s[si];p[si+3]=s[si+3]}
+  return new Blob([hd,p],{type:'application/octet-stream'});
+}
+function dlB(b,n){const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+
+function bFC(){
+  if(!img)return null;
+  const t=+esS.value,e=expP(t),sc=src.width/img.width;
+  const c=document.createElement('canvas');c.width=e.w;c.height=e.h;
+  const x=c.getContext('2d');
+  const oW=img,oV={...vc},oS=S,tK=tC.k,tCv=tC.c,eK=eC.k,eCv=eC.c;
+  try{
+    img=src;vc={x:oV.x*sc,y:oV.y*sc};
+    let sb=e.s*sc;if(sb>MTS)sb=MTS;S=sb;inv();
+    const sp=Math.max(1,Math.ceil(S));
+    const tO=document.createElement('canvas');tO.width=tO.height=sp;
+    dSI(tO.getContext('2d'),sp,src);
+    if(bgS.value==='color'){x.fillStyle=bgC.value;x.fillRect(0,0,e.w,e.h)}
+    else if(bgS.value!=='checker')dEB(x,e.w,e.h,src);
+    pPat(x,e.w,e.h,md,tO,e.nX,e.nY);
+  }finally{
+    img=oW;vc=oV;S=oS;tC.k=tK;tC.c=tCv;eC.k=eK;eC.c=eCv;
+  }
+  return c;
+}
+
+dlb.onclick=()=>{
+  if(!img){alert('Choose a photo first.');return}
+  toast('Rendering...');
+  setTimeout(()=>{
+    const c=bFC(),f=efS.value;let oc=c;
+    if(f==='jpeg'){
+      const fl2=document.createElement('canvas');fl2.width=c.width;fl2.height=c.height;
+      const fx=fl2.getContext('2d');fx.fillStyle='#fff';fx.fillRect(0,0,c.width,c.height);
+      fx.drawImage(c,0,0);oc=fl2;
+    }
+    if(f==='tga')dlB(cTGA(oc),`pattern_${oc.width}x${oc.height}.tga`);
+    else{
+      const mime=f==='jpeg'?'image/jpeg':'image/png',ext=f==='jpeg'?'jpg':'png';
+      oc.toBlob(b=>{dlB(b,`pattern_${oc.width}x${oc.height}.${ext}`);toast('Saved!')},mime,.95);
+    }
+  },50);
+};
+
+cpb.onclick=async()=>{
+  if(!img){alert('Choose a photo first.');return}
+  toast('Rendering...');
+  setTimeout(async()=>{
+    const c=bFC();
+    try{
+      const b=await new Promise(r=>c.toBlob(r,'image/png'));
+      await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);
+      toast('📋 Copied!');
+    }catch(e){toast('Failed. Try Download.')}
+  },50);
+};
+
+// init
+S=s2S(+cnS.value);
+md=pSel.value;
+perUpd();exp();bgHint();dSel();pPrev();
+</script>
+</body>
+</html>
