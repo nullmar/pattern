@@ -44,13 +44,13 @@ wallpaper symmetry groups to modern aperiodic tilings like Penrose and Truchet.
 <td width="50%">
 
 **Hexagon**
-<img src="screens/pattern_1005x1044 (1).png" width="100%">
+<img src="/pattern_1005x1044 (1).png" width="100%">
 
 </td>
 <td width="50%">
 
 **Kaleidoscope**
-<img src="screens/pattern_1005x1044.png" width="100%">
+<img src="/pattern_1005x1044.png" width="100%">
 
 </td>
 </tr>
