@@ -59,7 +59,7 @@ wallpaper symmetry groups to modern aperiodic tilings like Penrose and Truchet.
 
 </div>
 
-> 💡 Замени пути к картинкам на свои. Если скриншотов нет — просто удали эту секцию.
+
 
 ---
 
