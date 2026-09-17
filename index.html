@@ -1,0 +1,2191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pattern — Create From Image</title>
+<style>
+  :root{
+    --bg:#2b2b2b; --panel:#383838; --panel2:#454545; --border:#1e1e1e;
+    --text:#e8e8e8; --muted:#9a9a9a; --accent:#2d6cdf;
+  }
+  * { box-sizing:border-box; }
+  body {
+    background:var(--bg); color:var(--text);
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    margin:0; padding:0; overflow:hidden; height:100vh;
+  }
+  #dropOverlay {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(45,108,223,0.25);
+    border:4px dashed var(--accent); z-index:9999; display:none;
+    align-items:center; justify-content:center; pointer-events:none;
+  }
+  #dropOverlay.visible { display:flex; }
+  #dropOverlay .msg {
+    background:rgba(0,0,0,0.8); color:#fff;
+    padding:24px 40px; border-radius:8px; font-size:20px; font-weight:600;
+  }
+  .content { height:100vh; display:grid; grid-template-columns: 1fr 340px; overflow:hidden; }
+  .center-col {
+    background:#1a1a1a; display:flex; align-items:center; justify-content:center;
+    overflow:hidden; padding:16px; position:relative;
+  }
+  .center-col canvas { max-width:100%; max-height:100%; display:block; background:#000; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+  .right-col { background:var(--panel); border-left:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; height:100vh; }
+  .section { padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .section .section-title {
+    display:flex; align-items:center; gap:6px;
+    font-size:11px; color:var(--muted); text-transform:uppercase;
+    letter-spacing:0.5px; margin-bottom:10px; cursor:pointer; user-select:none;
+  }
+  .section .section-title::before { content:'▾'; font-size:10px; transition:transform 0.15s; }
+  .section.collapsed .section-title::before { transform:rotate(-90deg); }
+  .section.collapsed .section-body { display:none; }
+  .section-body { display:flex; flex-direction:column; gap:10px; }
+  .hint { color:var(--muted); font-size:11px; line-height:1.4; margin-top:6px; }
+  .hint-icon {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:14px; height:14px; border-radius:50%;
+    background:var(--panel2); color:var(--muted);
+    font-size:9px; font-weight:600; cursor:help; margin-left:4px; user-select:none;
+  }
+  .hint-icon:hover { background:var(--accent); color:#fff; }
+
+  /* Выделенная секция Pattern */
+  .section.pattern-section {
+    background: linear-gradient(180deg, #3a4660 0%, #343c52 100%);
+    border-left: 3px solid var(--accent);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px;
+  }
+  .section.pattern-section .section-title {
+    color: #cfe0ff;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .section.pattern-section .section-title::before {
+    color: var(--accent);
+  }
+  .pattern-select-wrap {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: rgba(0,0,0,0.25);
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(45,108,223,0.4);
+  }
+  .pattern-preview-box {
+    width: 60px; height: 60px;
+    border: 2px solid var(--accent);
+    border-radius: 4px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #000;
+    box-shadow: 0 0 8px rgba(45,108,223,0.5);
+  }
+  .pattern-preview-box canvas { width: 100%; height: 100%; display: block; }
+  #patternSelect {
+    background: #2a3242;
+    color: #fff;
+    border: 1px solid rgba(45,108,223,0.6);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    width: 100%;
+    cursor: pointer;
+  }
+  #patternSelect:hover { border-color: var(--accent); }
+  #patternSelect optgroup {
+    background: #1a1f2b;
+    color: #9ab4e8;
+    font-weight: 700;
+  }
+  #patternSelect option {
+    background: #2a3242;
+    color: #e8e8e8;
+    font-weight: 400;
+  }
+
+  #tooltip {
+    position:fixed; background:#0a0a0a; color:#e8e8e8;
+    padding:8px 12px; border-radius:4px; font-size:11px; line-height:1.4;
+    max-width:260px; box-shadow: 0 4px 16px rgba(0,0,0,0.7);
+    border: 1px solid #333; z-index: 99999; pointer-events: none;
+    opacity: 0; transition: opacity 0.12s;
+  }
+  #tooltip.visible { opacity: 1; }
+  #tooltip::before {
+    content:''; position:absolute; top:-6px; left:50%; transform:translateX(-50%);
+    border:5px solid transparent; border-bottom-color:#0a0a0a;
+  }
+  #tooltip.bottom::before {
+    top:auto; bottom:-6px; border-bottom-color:transparent; border-top-color:#0a0a0a;
+  }
+  .file-btn {
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); border-radius:4px;
+    padding:10px 12px; cursor:pointer; font-size:12px; width:100%;
+    transition: border-color 0.15s;
+  }
+  .file-btn:hover { border-color:var(--accent); }
+  .file-btn .file-icon { font-size:16px; }
+  .file-btn .file-name {
+    color:var(--muted); font-size:11px; margin-left:auto;
+    max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .action-row { display:flex; gap:6px; }
+  .action-row button {
+    flex:1; background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); border-radius:4px;
+    padding:8px 6px; font-size:11px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:4px;
+    transition: border-color 0.15s;
+  }
+  .action-row button:hover { border-color:var(--accent); }
+  .action-row button .icon { font-size:13px; }
+  .field-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .field-row label { font-size:12px; color:var(--text); display:flex; align-items:center; }
+  .field-row .val { font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  input[type=range] { width:100%; accent-color:var(--accent); margin:0; }
+  select {
+    background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); border-radius:4px;
+    padding:6px 8px; font-size:12px; width:100%; cursor:pointer;
+  }
+  select:hover { border-color:#666; }
+  .thumb-row { display:flex; gap:10px; align-items:center; }
+  .thumb-box {
+    width:64px; height:64px; border:2px solid var(--accent);
+    border-radius:4px; overflow:hidden; flex-shrink:0; background:#000;
+  }
+  .thumb-box canvas { width:100%; height:100%; display:block; }
+  .source-preview canvas {
+    width:100%; aspect-ratio:1; background:#0a0a0a;
+    border:1px solid var(--border); border-radius:4px;
+    display:block; cursor:grab; touch-action: none;
+  }
+  .source-preview canvas:active { cursor:grabbing; }
+  .reset-btn {
+    margin-top:10px;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); border-radius:4px;
+    padding:8px 12px; font-size:12px; cursor:pointer; width:100%;
+    transition: border-color 0.15s;
+  }
+  .reset-btn:hover { border-color:var(--accent); }
+  .reset-btn .icon { font-size:14px; }
+  .source-hint {
+    display:flex; align-items:center; gap:6px;
+    color:var(--muted); font-size:11px;
+    margin-top:8px; padding:6px 8px;
+    background:#2a2a2a; border-radius:4px; border-left:2px solid var(--accent);
+  }
+  .source-hint .icon { font-size:14px; color:var(--accent); }
+  .palette-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .palette-swatch {
+    width:36px; height:36px;
+    border:2px solid var(--border); border-radius:4px;
+    cursor:pointer; transition: transform 0.1s;
+  }
+  .palette-swatch:hover { transform: scale(1.1); border-color:var(--accent); }
+  .export-block { margin-top:auto; border-top:2px solid var(--accent); background:#2f2f2f; flex-shrink:0; }
+  .bottom-actions { padding:12px 16px; display:flex; flex-direction:column; gap:8px; }
+  .bottom-actions button {
+    width:100%; padding:10px 12px; border-radius:4px;
+    font-size:12px; cursor:pointer; border:none;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .bottom-actions .save { background:var(--accent); color:#fff; font-weight:600; }
+  .bottom-actions .save:hover { filter:brightness(1.1); }
+  .bottom-actions .copy { background:var(--panel2); color:var(--text); border:1px solid var(--border); }
+  .bottom-actions .copy:hover { border-color:var(--accent); }
+  .bottom-actions .icon { font-size:14px; }
+  input[type=file] { display:none; }
+  .file-info {
+    font-size:10px; color:var(--muted); padding:8px 16px;
+    text-overflow:ellipsis; overflow:hidden; white-space:nowrap;
+    border-bottom:1px solid var(--border);
+  }
+  .right-col::-webkit-scrollbar { width:8px; }
+  .right-col::-webkit-scrollbar-track { background:var(--panel); }
+  .right-col::-webkit-scrollbar-thumb { background:var(--panel2); border-radius:4px; }
+  .right-col::-webkit-scrollbar-thumb:hover { background:#555; }
+  #toast {
+    position:fixed; bottom:30px; left:50%;
+    transform:translateX(-50%) translateY(100px);
+    background:#0a0a0a; color:#fff;
+    padding:10px 20px; border-radius:6px; font-size:13px; font-weight:600;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    border:1px solid var(--accent); z-index: 99998;
+    opacity: 0; transition: all 0.3s; pointer-events:none;
+  }
+  #toast.visible { opacity: 1; transform:translateX(-50%) translateY(0); }
+  @media (max-width: 700px) {
+    .content { grid-template-columns: 1fr; grid-template-rows: 45vh 55vh; height:100vh; }
+    .center-col { padding:8px; }
+    .right-col { border-left:none; border-top:1px solid var(--border); height:55vh; }
+    .thumb-box { width:48px; height:48px; }
+    .thumb-box canvas { width:48px; height:48px; }
+    .source-preview canvas { touch-action: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="dropOverlay"><div class="msg">📁 Drop your image here</div></div>
+<div id="toast"></div>
+
+<div class="content">
+
+  <div class="center-col">
+    <canvas id="patternCanvas" width="900" height="900"></canvas>
+  </div>
+
+  <div class="right-col">
+
+    <div class="section">
+      <div class="section-title">File</div>
+      <div class="section-body">
+        <button class="file-btn" id="fileBtn">
+          <span class="file-icon">📁</span>
+          <span>Choose File</span>
+          <span class="file-name" id="fileLabel">not selected</span>
+        </button>
+        <div class="action-row">
+          <button id="randomBtn" title="Random scale & rotation">
+            <span class="icon">🎲</span><span>Random</span>
+          </button>
+          <button id="pasteBtn" title="Paste from clipboard">
+            <span class="icon">📋</span><span>Paste</span>
+          </button>
+        </div>
+        <div class="hint">Drag & drop a file anywhere, or press Ctrl+V to paste</div>
+        <div class="thumb-row" style="margin-top:8px;">
+          <div class="thumb-box"><canvas id="thumbCanvas" width="64" height="64"></canvas></div>
+          <div style="font-size:11px; color:var(--muted);">Current tile</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ВЫДЕЛЕННАЯ СЕКЦИЯ PATTERN -->
+    <div class="section pattern-section">
+      <div class="section-title">
+        ⬢ Pattern Type
+        <span class="hint-icon" data-tip="Symmetry group or aperiodic pattern type. This is the main control — it changes the whole tiling.">?</span>
+      </div>
+      <div class="section-body">
+        <div class="pattern-select-wrap">
+          <div class="pattern-preview-box">
+            <canvas id="patternPreview" width="60" height="60"></canvas>
+          </div>
+          <select id="patternSelect" style="flex:1;">
+            <optgroup label="Symmetry groups">
+              <option value="hexagon" selected>Hexagon (6 sectors)</option>
+              <option value="hexagon12">Hexagon 12 (12 sectors)</option>
+              <option value="square8">Square 8 (rhombus)</option>
+              <option value="square4">Square 4 (90° rotation)</option>
+              <option value="triangle6">Triangle 6</option>
+              <option value="triangle12">Triangle 12</option>
+              <option value="kaleido">Kaleidoscope</option>
+              <option value="mirror">Mirror 2×2</option>
+              <option value="grid">Grid (no mirrors)</option>
+              <option value="rot180">Rotation 180°</option>
+              <option value="glide">Glide reflection</option>
+              <option value="pmm">Rectangular (pmm)</option>
+            </optgroup>
+            <optgroup label="Aperiodic / decorative">
+              <option value="penrose">Penrose (rhombs)</option>
+              <option value="hat">Hat (monotile-ish)</option>
+              <option value="pinwheel">Pinwheel</option>
+              <option value="truchet">Truchet tiles</option>
+              <option value="moire">Moiré</option>
+              <option value="voronoi">Voronoi (pseudo)</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Image</div>
+      <div class="section-body">
+        <div class="field-row">
+          <label>Scale
+            <span class="hint-icon" data-tip="Zoom in/out of the photo inside the selection region.">?</span>
+          </label>
+          <span class="val" id="scaleVal">40</span>
+        </div>
+        <input type="range" id="scaleSlider" min="10" max="500" value="40">
+
+        <div class="field-row">
+          <label>Rotation
+            <span class="hint-icon" data-tip="Rotate the photo inside the region. 0-360 degrees.">?</span>
+          </label>
+          <span class="val" id="rotVal">0</span>
+        </div>
+        <input type="range" id="rotSlider" min="0" max="360" value="0">
+
+        <div class="field-row">
+          <label>Tile Size
+            <span class="hint-icon" data-tip="Size of one tile in the pattern.">?</span>
+          </label>
+          <span class="val" id="countVal">5 × 3</span>
+        </div>
+        <input type="range" id="countSlider" min="20" max="160" value="60" step="0.01">
+      </div>
+    </div>
+
+    <div class="section source-preview">
+      <div class="section-title">
+        Source
+        <span class="hint-icon" data-tip="The blue shape shows exactly what part of the photo becomes one tile. Everything outside it is ignored.">?</span>
+      </div>
+      <canvas id="selectorCanvas" width="280" height="280"></canvas>
+      <div class="source-hint">
+        <span class="icon">🖱</span><span>Drag inside to move the region</span>
+      </div>
+      <button class="reset-btn" id="resetViewBtn">
+        <span class="icon">⟲</span><span>Reset Position</span>
+      </button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        Palette
+        <span class="hint-icon" data-tip="5 dominant colors extracted from your photo. Click a color to use it as the background color.">?</span>
+      </div>
+      <div class="section-body">
+        <div class="palette-row" id="paletteRow">
+          <div style="font-size:11px; color:var(--muted);">Load a photo to see colors</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        Background
+        <span class="hint-icon" data-tip="What fills the areas OUTSIDE the photo when the region goes past the image edges.">?</span>
+      </div>
+      <div class="section-body">
+        <select id="bgModeSelect">
+          <option value="checker" selected>Checker (transparent)</option>
+          <option value="color">Solid color</option>
+          <option value="blur">Blurred image</option>
+          <option value="edge">Edge (whole image contain)</option>
+          <option value="edge-region">Edge (region-aware)</option>
+          <option value="mirror">Mirror (whole image contain)</option>
+          <option value="mirror-region">Mirror (region-aware)</option>
+        </select>
+        <input type="color" id="bgColorPicker" value="#000000" style="display:none;">
+        <div class="hint" id="bgHint">Transparent checkerboard.</div>
+      </div>
+    </div>
+
+    <div class="export-block">
+      <div class="section">
+        <div class="section-title">Export</div>
+        <div class="section-body">
+          <div class="field-row">
+            <label>Size</label>
+            <select id="exportSizeSelect" style="width:auto;">
+              <option value="1024">~1024</option>
+              <option value="2048" selected>~2048</option>
+              <option value="4096">~4096</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Format</label>
+            <select id="exportFormatSelect" style="width:auto;">
+              <option value="png" selected>PNG</option>
+              <option value="tga">TGA</option>
+              <option value="jpeg">JPEG</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="file-info" id="exportLine">—</div>
+      <div class="bottom-actions">
+        <button class="copy" id="copyBtn"><span class="icon">📋</span><span>Copy to clipboard</span></button>
+        <button class="save" id="downloadBtn"><span class="icon">⬇</span><span>Save</span></button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="tooltip"></div>
+<input type="file" id="fileInput" accept="image/*">
+
+<script>
+const fileBtn = document.getElementById('fileBtn');
+const fileInput = document.getElementById('fileInput');
+const fileLabel = document.getElementById('fileLabel');
+const randomBtn = document.getElementById('randomBtn');
+const pasteBtn = document.getElementById('pasteBtn');
+const copyBtn = document.getElementById('copyBtn');
+const thumbCanvas = document.getElementById('thumbCanvas');
+const thumbCtx = thumbCanvas.getContext('2d');
+const selectorCanvas = document.getElementById('selectorCanvas');
+const patternCanvas = document.getElementById('patternCanvas');
+const patCtx = patternCanvas.getContext('2d');
+const exportLine = document.getElementById('exportLine');
+const bgHint = document.getElementById('bgHint');
+const tooltip = document.getElementById('tooltip');
+const dropOverlay = document.getElementById('dropOverlay');
+const toast = document.getElementById('toast');
+const paletteRow = document.getElementById('paletteRow');
+const patternSelect = document.getElementById('patternSelect');
+const patternPreview = document.getElementById('patternPreview');
+const patternPreviewCtx = patternPreview.getContext('2d');
+
+const scaleSlider = document.getElementById('scaleSlider');
+const rotSlider = document.getElementById('rotSlider');
+const scaleVal = document.getElementById('scaleVal');
+const rotVal = document.getElementById('rotVal');
+const resetViewBtn = document.getElementById('resetViewBtn');
+const countSlider = document.getElementById('countSlider');
+const countVal = document.getElementById('countVal');
+const exportSizeSelect = document.getElementById('exportSizeSelect');
+const exportFormatSelect = document.getElementById('exportFormatSelect');
+const downloadBtn = document.getElementById('downloadBtn');
+const bgModeSelect = document.getElementById('bgModeSelect');
+const bgColorPicker = document.getElementById('bgColorPicker');
+
+// ============ СОСТОЯНИЕ ============
+let S = 60;
+let sourceImg = null;
+let workingImg = null;
+let viewCenter = { x: 0, y: 0 };
+let panStart = null;
+let currentModeVal = 'hexagon';
+let tileCache = { key: '', canvas: null };
+let edgeCache = { key: '', canvas: null };
+const offCanvasCache = { key: '', canvas: null };
+
+const MAX_WORK_SIZE = 2000;
+const MAX_DRAW_SCALE = 30;
+const MAX_TILE_SIDE = 8192;
+
+const S_MIN = 20;
+const S_MAX = 186;
+
+function sliderToS(sliderVal) {
+  const min = parseFloat(countSlider.min);
+  const max = parseFloat(countSlider.max);
+  const t = (sliderVal - min) / (max - min);
+  return S_MAX * Math.pow(S_MIN / S_MAX, t);
+}
+
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 40.0;
+
+function sideImgForImg(img) {
+  if (!img) return 100;
+  const base = Math.min(img.width, img.height);
+  const t = (parseFloat(scaleSlider.value) - 10) / (500 - 10);
+  const zoom = MIN_ZOOM * Math.pow(MAX_ZOOM / MIN_ZOOM, t);
+  let side = base / zoom;
+  return Math.max(0.5, Math.min(side, base * 4));
+}
+function sideImg() { return sideImgForImg(workingImg); }
+
+let toastTimer = null;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 2000);
+}
+
+function invalidateCaches() {
+  tileCache.key = '';
+  edgeCache.key = '';
+  offCanvasCache.key = '';
+}
+
+function loadImage(img, name) {
+  sourceImg = img;
+  const maxSide = Math.max(img.width, img.height);
+  const finalize = (wImg) => {
+    workingImg = wImg;
+    viewCenter = { x: wImg.width / 2, y: wImg.height / 2 };
+    invalidateCaches();
+    extractPalette();
+    render();
+    drawPatternPreview();
+  };
+  if (maxSide > MAX_WORK_SIZE) {
+    const sc = MAX_WORK_SIZE / maxSide;
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * sc);
+    c.height = Math.round(img.height * sc);
+    const cctx = c.getContext('2d');
+    cctx.imageSmoothingEnabled = true;
+    cctx.imageSmoothingQuality = 'high';
+    cctx.drawImage(img, 0, 0, c.width, c.height);
+    const wImg = new Image();
+    wImg.onload = () => finalize(wImg);
+    wImg.src = c.toDataURL();
+  } else {
+    finalize(img);
+  }
+  if (name) fileLabel.textContent = name;
+}
+
+function loadImageFromFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => loadImage(img, file.name);
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+fileBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (file) loadImageFromFile(file);
+});
+
+let dragCounter = 0;
+document.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  dragCounter++;
+  if (e.dataTransfer.types.includes('Files')) dropOverlay.classList.add('visible');
+});
+document.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('visible'); }
+});
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  dropOverlay.classList.remove('visible');
+  const file = e.dataTransfer.files[0];
+  if (file) loadImageFromFile(file);
+});
+
+async function pasteFromClipboard() {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      for (const type of item.types) {
+        if (type.startsWith('image/')) {
+          const blob = await item.getType(type);
+          const file = new File([blob], 'pasted-image.png', { type });
+          loadImageFromFile(file);
+          return;
+        }
+      }
+    }
+    showToast('No image in clipboard');
+  } catch (err) {
+    showToast('Clipboard access denied — try Ctrl+V instead');
+  }
+}
+pasteBtn.addEventListener('click', pasteFromClipboard);
+
+document.addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (file) { loadImageFromFile(file); e.preventDefault(); return; }
+    }
+  }
+});
+
+function extractPalette() {
+  if (!workingImg) return;
+  const c = document.createElement('canvas');
+  c.width = 100; c.height = 100;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(workingImg, 0, 0, 100, 100);
+  const data = ctx.getImageData(0, 0, 100, 100).data;
+  const bins = {};
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i] >> 6, g = data[i+1] >> 6, b = data[i+2] >> 6, a = data[i+3];
+    if (a < 128) continue;
+    const key = (r << 4) | (g << 2) | b;
+    if (!bins[key]) bins[key] = { count: 0, r: 0, g: 0, b: 0 };
+    bins[key].count++;
+    bins[key].r += data[i]; bins[key].g += data[i+1]; bins[key].b += data[i+2];
+  }
+  const colors = Object.values(bins)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+    .map(b => ({ r: Math.round(b.r/b.count), g: Math.round(b.g/b.count), b: Math.round(b.b/b.count) }));
+  renderPalette(colors);
+}
+
+function rgbToHex(c) {
+  return '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+function renderPalette(colors) {
+  paletteRow.innerHTML = '';
+  if (!colors || colors.length === 0) {
+    paletteRow.innerHTML = '<div style="font-size:11px; color:var(--muted);">No colors found</div>';
+    return;
+  }
+  colors.forEach(c => {
+    const hex = rgbToHex(c);
+    const sw = document.createElement('div');
+    sw.className = 'palette-swatch';
+    sw.style.background = hex;
+    sw.title = hex + ' — click to use as background';
+    sw.addEventListener('click', () => {
+      bgModeSelect.value = 'color';
+      bgColorPicker.value = hex;
+      bgColorPicker.style.display = 'block';
+      updateBgHint();
+      invalidateCaches();
+      render();
+      showToast('Color applied: ' + hex);
+    });
+    paletteRow.appendChild(sw);
+  });
+}
+
+function applyRandom() {
+  scaleSlider.value = 30 + Math.random() * 200;
+  scaleVal.textContent = Math.round(parseFloat(scaleSlider.value));
+  rotSlider.value = Math.random() * 360;
+  rotVal.textContent = Math.round(parseFloat(rotSlider.value));
+  if (workingImg) viewCenter = { x: workingImg.width / 2, y: workingImg.height / 2 };
+  invalidateCaches();
+  updatePeriodInfo();
+  updateExportLine();
+  render();
+  drawPatternPreview();
+  showToast('🎲 Random scale & rotation');
+}
+randomBtn.addEventListener('click', applyRandom);
+
+patternSelect.addEventListener('change', () => {
+  currentModeVal = patternSelect.value;
+  invalidateCaches();
+  updatePeriodInfo();
+  updateExportLine();
+  render();
+  drawPatternPreview();
+});
+
+document.querySelectorAll('.section-title').forEach(t => {
+  t.addEventListener('click', (e) => {
+    if (e.target.classList.contains('hint-icon')) return;
+    t.parentElement.classList.toggle('collapsed');
+  });
+});
+
+resetViewBtn.addEventListener('click', () => {
+  if (!workingImg) return;
+  viewCenter = { x: workingImg.width / 2, y: workingImg.height / 2 };
+  invalidateCaches();
+  render();
+  drawPatternPreview();
+});
+
+bgModeSelect.addEventListener('change', () => {
+  bgColorPicker.style.display = (bgModeSelect.value === 'color') ? 'block' : 'none';
+  updateBgHint();
+  invalidateCaches();
+  render();
+});
+bgColorPicker.addEventListener('input', () => { invalidateCaches(); render(); });
+exportSizeSelect.addEventListener('change', () => { updateExportLine(); draw(); });
+
+function bindSlider(slider, label) {
+  slider.addEventListener('input', () => {
+    label.textContent = Math.round(parseFloat(slider.value));
+    invalidateCaches();
+    drawSelector();
+    scheduleHeavyRender();
+  });
+}
+bindSlider(scaleSlider, scaleVal);
+bindSlider(rotSlider, rotVal);
+
+countSlider.addEventListener('input', () => {
+  S = sliderToS(parseFloat(countSlider.value));
+  updatePeriodInfo();
+  updateExportLine();
+  invalidateCaches();
+  drawSelector();
+  scheduleHeavyRender();
+});
+
+let heavyRenderTimer = null;
+function scheduleHeavyRender() {
+  if (heavyRenderTimer !== null) clearTimeout(heavyRenderTimer);
+  heavyRenderTimer = setTimeout(() => {
+    heavyRenderTimer = null;
+    draw();
+    drawThumb();
+    drawPatternPreview();
+  }, 90);
+}
+
+function getCanvasPos(e) {
+  const rect = selectorCanvas.getBoundingClientRect();
+  const sc = selectorCanvas.width / rect.width;
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+  return { x: cx * sc, y: cy * sc };
+}
+
+function startPan(e) {
+  if (!workingImg) return;
+  e.preventDefault();
+  const p = getCanvasPos(e);
+  panStart = { x: p.x, y: p.y, center: { ...viewCenter } };
+}
+function movePan(e) {
+  if (!panStart || !workingImg) return;
+  e.preventDefault();
+  const p = getCanvasPos(e);
+  const rect = selectorCanvas.getBoundingClientRect();
+  const sc = selectorCanvas.width / rect.width;
+  const dxs = (p.x - panStart.x) / sc;
+  const dys = (p.y - panStart.y) / sc;
+  const win = Math.min(selectorCanvas.width, selectorCanvas.height) - 20;
+  const drawScale = win / sideImg();
+  const rad = parseFloat(rotSlider.value) * Math.PI / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  const invdx = (dxs * cos + dys * sin) / drawScale;
+  const invdy = (-dxs * sin + dys * cos) / drawScale;
+  viewCenter = { x: panStart.center.x - invdx, y: panStart.center.y - invdy };
+  invalidateCaches();
+  drawSelector();
+  scheduleHeavyRender();
+}
+function endPan() { panStart = null; }
+
+selectorCanvas.addEventListener('mousedown', startPan);
+window.addEventListener('mousemove', movePan);
+window.addEventListener('mouseup', endPan);
+selectorCanvas.addEventListener('touchstart', startPan, { passive: false });
+selectorCanvas.addEventListener('touchmove', movePan, { passive: false });
+selectorCanvas.addEventListener('touchend', endPan);
+
+// ============ ФОН ============
+
+function containRect(imgW, imgH, w, h, padding = 0.98) {
+  const scale = Math.min(w / imgW, h / imgH) * padding;
+  const dw = imgW * scale, dh = imgH * scale;
+  return { dx: (w - dw) / 2, dy: (h - dh) / 2, dw, dh };
+}
+
+function chamferFill(imgData, W, H) {
+  const data = imgData.data;
+  const N = W * H;
+  const INF = 0x7fffffff;
+  const dist = new Int32Array(N);
+  const srcIdx = new Int32Array(N);
+  for (let i = 0; i < N; i++) {
+    if (data[i * 4 + 3] > 0) { dist[i] = 0; srcIdx[i] = i; }
+    else { dist[i] = INF; srcIdx[i] = -1; }
+  }
+  const D1 = 100, D2 = 141;
+  for (let y = 0; y < H; y++) {
+    const row = y * W;
+    for (let x = 0; x < W; x++) {
+      const i = row + x;
+      if (dist[i] === 0) continue;
+      let best = dist[i], bestSrc = srcIdx[i];
+      if (x > 0) { const j = i - 1; const d = dist[j] + D1; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
+      if (y > 0) { const j = i - W; const d = dist[j] + D1; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
+      if (x > 0 && y > 0) { const j = i - W - 1; const d = dist[j] + D2; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
+      if (x < W - 1 && y > 0) { const j = i - W + 1; const d = dist[j] + D2; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
+      dist[i] = best; srcIdx[i] = bestSrc;
+    }
+  }
+  for (let y = H - 1; y >= 0; y--) {
+    const row = y * W;
+    for (let x = W - 1; x >= 0; x--) {
+      const i = row + x;
+      if (dist[i] === 0) continue;
+      let best = dist[i], bestSrc = srcIdx[i];
+      if (x < W - 1) { const j = i + 1; const d = dist[j] + D1; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
+      if (y < H - 1) { const j = i + W; const d = dist[j] + D1; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
+      if (x < W - 1 && y < H - 1) { const j = i + W + 1; const d = dist[j] + D2; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
+      if (x > 0 && y < H - 1) { const j = i + W - 1; const d = dist[j] + D2; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
+      dist[i] = best; srcIdx[i] = bestSrc;
+    }
+  }
+  for (let i = 0; i < N; i++) {
+    if (data[i * 4 + 3] > 0) continue;
+    const s = srcIdx[i];
+    if (s < 0) continue;
+    data[i * 4]     = data[s * 4];
+    data[i * 4 + 1] = data[s * 4 + 1];
+    data[i * 4 + 2] = data[s * 4 + 2];
+    data[i * 4 + 3] = 255;
+  }
+}
+
+function drawImageTransformed(ctx, sizePx, img) {
+  if (!img) return;
+  const side = sideImgForImg(img);
+  let drawScale = sizePx / side;
+  if (drawScale > MAX_DRAW_SCALE) drawScale = MAX_DRAW_SCALE;
+  if (drawScale < 0.01) drawScale = 0.01;
+  const rot = parseFloat(rotSlider.value) * Math.PI / 180;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.translate(sizePx / 2, sizePx / 2);
+  ctx.rotate(rot);
+  ctx.scale(drawScale, drawScale);
+  ctx.translate(-viewCenter.x, -viewCenter.y);
+  ctx.drawImage(img, 0, 0);
+  ctx.restore();
+}
+
+function buildEdgeWhole(sizePx, img) {
+  const SMALL = Math.min(160, sizePx);
+  const off = document.createElement('canvas');
+  off.width = off.height = SMALL;
+  const offCtx = off.getContext('2d');
+  const { dx, dy, dw, dh } = containRect(img.width, img.height, SMALL, SMALL);
+  offCtx.drawImage(img, dx, dy, dw, dh);
+  const imgData = offCtx.getImageData(0, 0, SMALL, SMALL);
+  chamferFill(imgData, SMALL, SMALL);
+  offCtx.putImageData(imgData, 0, 0);
+  const out = document.createElement('canvas');
+  out.width = out.height = sizePx;
+  const octx = out.getContext('2d');
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+  octx.drawImage(off, 0, 0, sizePx, sizePx);
+  return out;
+}
+
+function buildEdgeRegion(sizePx, img) {
+  const SMALL = Math.min(160, sizePx);
+  const off = document.createElement('canvas');
+  off.width = off.height = SMALL;
+  const offCtx = off.getContext('2d');
+  const k = SMALL / sizePx;
+  const side = sideImgForImg(img);
+  let drawScale = sizePx / side * k;
+  if (drawScale > MAX_DRAW_SCALE * k) drawScale = MAX_DRAW_SCALE * k;
+  if (drawScale < 0.01 * k) drawScale = 0.01 * k;
+  const rot = parseFloat(rotSlider.value) * Math.PI / 180;
+  offCtx.save();
+  offCtx.imageSmoothingEnabled = true;
+  offCtx.imageSmoothingQuality = 'high';
+  offCtx.translate(SMALL / 2, SMALL / 2);
+  offCtx.rotate(rot);
+  offCtx.scale(drawScale, drawScale);
+  offCtx.translate(-viewCenter.x, -viewCenter.y);
+  offCtx.drawImage(img, 0, 0);
+  offCtx.restore();
+
+  const imgData = offCtx.getImageData(0, 0, SMALL, SMALL);
+  chamferFill(imgData, SMALL, SMALL);
+  offCtx.putImageData(imgData, 0, 0);
+
+  const out = document.createElement('canvas');
+  out.width = out.height = sizePx;
+  const octx = out.getContext('2d');
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+  octx.drawImage(off, 0, 0, sizePx, sizePx);
+  return out;
+}
+
+function buildMirrorWhole(sizePx, img) {
+  const off = document.createElement('canvas');
+  off.width = off.height = sizePx;
+  const octx = off.getContext('2d');
+  const { dx, dy, dw, dh } = containRect(img.width, img.height, sizePx, sizePx);
+  octx.drawImage(img, dx, dy, dw, dh);
+  if (dy > 0) {
+    octx.save(); octx.translate(dx, dy); octx.scale(1, -1);
+    octx.drawImage(img, 0, 0, img.width, img.height, 0, -dy, dw, dy); octx.restore();
+  }
+  if (dy + dh < sizePx) {
+    const bs = sizePx - (dy + dh);
+    octx.save(); octx.translate(dx, dy + dh); octx.scale(1, -1);
+    octx.drawImage(img, 0, 0, img.width, img.height, 0, -bs, dw, bs); octx.restore();
+  }
+  if (dx > 0) {
+    octx.save(); octx.translate(dx, dy); octx.scale(-1, 1);
+    octx.drawImage(img, 0, 0, img.width, img.height, -dx, 0, dx, dh); octx.restore();
+  }
+  if (dx + dw < sizePx) {
+    const rs = sizePx - (dx + dw);
+    octx.save(); octx.translate(dx + dw, dy); octx.scale(-1, 1);
+    octx.drawImage(img, 0, 0, img.width, img.height, 0, 0, rs, dh); octx.restore();
+  }
+  return off;
+}
+
+function buildMirrorRegion(sizePx, img) {
+  const SMALL = Math.min(160, sizePx);
+  const off = document.createElement('canvas');
+  off.width = off.height = SMALL;
+  const octx = off.getContext('2d');
+
+  const k = SMALL / sizePx;
+  const side = sideImgForImg(img);
+  let drawScale = sizePx / side * k;
+  if (drawScale > MAX_DRAW_SCALE * k) drawScale = MAX_DRAW_SCALE * k;
+  if (drawScale < 0.01 * k) drawScale = 0.01 * k;
+  const rot = parseFloat(rotSlider.value) * Math.PI / 180;
+  octx.save();
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+  octx.translate(SMALL / 2, SMALL / 2);
+  octx.rotate(rot);
+  octx.scale(drawScale, drawScale);
+  octx.translate(-viewCenter.x, -viewCenter.y);
+  octx.drawImage(img, 0, 0);
+  octx.restore();
+
+  const imgData = octx.getImageData(0, 0, SMALL, SMALL);
+  const d = imgData.data;
+  let minX = SMALL, minY = SMALL, maxX = -1, maxY = -1;
+  for (let y = 0; y < SMALL; y++) {
+    for (let x = 0; x < SMALL; x++) {
+      if (d[(y * SMALL + x) * 4 + 3] > 0) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return off;
+
+  const tmp = document.createElement('canvas');
+  tmp.width = tmp.height = SMALL;
+  tmp.getContext('2d').drawImage(off, 0, 0);
+
+  const drawReflect = (sx, sy, sw, sh, dx, dy, dw, dh, flipX, flipY) => {
+    octx.save();
+    octx.translate(dx + (flipX ? dw : 0), dy + (flipY ? dh : 0));
+    octx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+    octx.drawImage(tmp, sx, sy, sw, sh, 0, 0, dw, dh);
+    octx.restore();
+  };
+
+  const bboxW = maxX - minX + 1;
+  const bboxH = maxY - minY + 1;
+
+  if (minY > 0) {
+    drawReflect(minX, minY, bboxW, Math.min(minY, bboxH), 0, 0, SMALL, minY, false, true);
+  }
+  if (maxY < SMALL - 1) {
+    const sh = Math.min(SMALL - 1 - maxY, bboxH);
+    drawReflect(minX, maxY + 1 - sh, bboxW, sh, 0, maxY + 1, SMALL, SMALL - 1 - maxY, false, true);
+  }
+  if (minX > 0) {
+    drawReflect(minX, minY, Math.min(minX, bboxW), bboxH, 0, 0, minX, SMALL, true, false);
+  }
+  if (maxX < SMALL - 1) {
+    const sw = Math.min(SMALL - 1 - maxX, bboxW);
+    drawReflect(maxX + 1 - sw, minY, sw, bboxH, maxX + 1, 0, SMALL - 1 - maxX, SMALL, true, false);
+  }
+
+  const out = document.createElement('canvas');
+  out.width = out.height = sizePx;
+  const octx2 = out.getContext('2d');
+  octx2.imageSmoothingEnabled = true;
+  octx2.imageSmoothingQuality = 'high';
+  octx2.drawImage(off, 0, 0, sizePx, sizePx);
+  return out;
+}
+
+function drawEdgeBackgroundWithImg(ctx, w, h, img) {
+  const mode = bgModeSelect.value;
+  if (mode === 'checker') return;
+  if (mode === 'color') {
+    ctx.fillStyle = bgColorPicker.value;
+    ctx.fillRect(0, 0, w, h);
+    return;
+  }
+  if (!img) return;
+
+  if (mode === 'blur') {
+    const { dx, dy, dw, dh } = containRect(img.width, img.height, w, h);
+    const blurPx = Math.max(4, Math.min(w, h) * 0.08);
+    ctx.save();
+    ctx.filter = `blur(${blurPx}px)`;
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.filter = 'none';
+    ctx.restore();
+    return;
+  }
+
+  const imgKey = (img === sourceImg) ? 'orig' : 'work';
+  const key = mode + '|' + imgKey + '|' + w + 'x' + h + '|'
+    + viewCenter.x.toFixed(2) + ',' + viewCenter.y.toFixed(2) + '|'
+    + scaleSlider.value + '|' + rotSlider.value;
+  if (edgeCache.key === key && edgeCache.canvas) {
+    ctx.drawImage(edgeCache.canvas, 0, 0, w, h);
+    return;
+  }
+
+  let built = null;
+  if (mode === 'edge') built = buildEdgeWhole(w, img);
+  else if (mode === 'edge-region') built = buildEdgeRegion(w, img);
+  else if (mode === 'mirror') built = buildMirrorWhole(w, img);
+  else if (mode === 'mirror-region') built = buildMirrorRegion(w, img);
+
+  if (built) {
+    edgeCache.key = key;
+    edgeCache.canvas = built;
+    ctx.drawImage(built, 0, 0, w, h);
+  }
+}
+
+function drawCheckerBackdrop(ctx, w, h) {
+  const cell = 12;
+  for (let y = 0; y < h; y += cell) {
+    for (let x = 0; x < w; x += cell) {
+      const dark = ((Math.round(x / cell) + Math.round(y / cell)) % 2) === 0;
+      ctx.fillStyle = dark ? '#7a7a7a' : '#9a9a9a';
+      ctx.fillRect(x, y, cell, cell);
+    }
+  }
+}
+
+function drawSourceInto(ctx, sizePx, img) {
+  if (!img) return;
+  drawEdgeBackgroundWithImg(ctx, sizePx, sizePx, img);
+  drawImageTransformed(ctx, sizePx, img);
+}
+
+function buildTileCanvas(sizePx, img) {
+  const imgType = (img === sourceImg) ? 'orig' : 'work';
+  const imgW = img ? img.width : 0;
+  const key = sizePx + '|' + imgType + '|' + imgW + '|' + viewCenter.x + '|' + viewCenter.y + '|' + rotSlider.value + '|' + scaleSlider.value + '|' + bgModeSelect.value + '|' + bgColorPicker.value;
+  if (tileCache.key === key && tileCache.canvas) return tileCache.canvas;
+  const c = document.createElement('canvas');
+  c.width = c.height = sizePx;
+  drawSourceInto(c.getContext('2d'), sizePx, img);
+  tileCache.key = key;
+  tileCache.canvas = c;
+  return c;
+}
+
+function currentMode() { return currentModeVal; }
+
+// Фигура = ровно та область, которая берётся в тайл.
+// Центрируется и вписывается в квадрат Source. Затемняется всё ВОКРУГ фигуры.
+function drawPatternShapeOverlay(ctx, ox, oy, win, mode) {
+  const L = ox, T = oy, R = ox + win, B = oy + win;
+  const pad = win * 0.08;
+  const innerW = win - pad * 2;
+  const innerH = win - pad * 2;
+  const cx0 = ox + win / 2, cy0 = oy + win / 2;
+
+  const pts = [];
+  const sector = (a1, a2) => {
+    pts.push([0, 0]);
+    pts.push([Math.cos(a1 * Math.PI / 180), Math.sin(a1 * Math.PI / 180)]);
+    pts.push([Math.cos(a2 * Math.PI / 180), Math.sin(a2 * Math.PI / 180)]);
+  };
+
+  if (mode === 'hexagon' || mode === 'triangle6' || mode === 'hat') {
+    sector(-90, -30);
+  } else if (mode === 'hexagon12' || mode === 'triangle12') {
+    sector(-90, -60);
+  } else if (mode === 'square8' || mode === 'kaleido') {
+    pts.push([0, 0], [1, 0], [1, -1]);
+  } else if (mode === 'square4') {
+    pts.push([0, 0], [1, 0], [1, 1], [0, 1]);
+  } else if (mode === 'mirror' || mode === 'pmm' || mode === 'truchet') {
+    pts.push([-1, -1], [0, -1], [0, 0], [-1, 0]);
+  } else if (mode === 'rot180') {
+    pts.push([-1, -1], [1, -1], [1, 0], [-1, 0]);
+  } else if (mode === 'glide') {
+    pts.push([-1, -1], [1, -1], [1, -0.5], [-1, -0.5]);
+  } else if (mode === 'penrose' || mode === 'pinwheel') {
+    sector(-90, -54);
+  } else {
+    pts.push([-1, -1], [1, -1], [1, 1], [-1, 1]);
+  }
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const [x, y] of pts) {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  const fw = maxX - minX;
+  const fh = maxY - minY;
+  const fcx = (minX + maxX) / 2;
+  const fcy = (minY + maxY) / 2;
+  const sc = Math.min(innerW / fw, innerH / fh);
+
+  const toScreen = (x, y) => [
+    cx0 + (x - fcx) * sc,
+    cy0 + (y - fcy) * sc
+  ];
+
+  const p = new Path2D();
+  for (let i = 0; i < pts.length; i++) {
+    const [sx, sy] = toScreen(pts[i][0], pts[i][1]);
+    if (i === 0) p.moveTo(sx, sy);
+    else p.lineTo(sx, sy);
+  }
+  p.closePath();
+
+  // 1) Затемняем всё, кроме фигуры.
+  ctx.save();
+  const outer = new Path2D();
+  outer.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  outer.addPath(p);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+  ctx.fill(outer, 'evenodd');
+  ctx.restore();
+
+  // 2) Обводим фигуру.
+  ctx.save();
+  ctx.strokeStyle = '#4da6ff';
+  ctx.lineWidth = 2;
+  ctx.stroke(p);
+  ctx.restore();
+}
+
+function drawSelector() {
+  const ctx = selectorCanvas.getContext('2d');
+  const cw = selectorCanvas.width, ch = selectorCanvas.height;
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.fillStyle = '#101216';
+  ctx.fillRect(0, 0, cw, ch);
+  if (!workingImg) return;
+
+  const win = Math.min(cw, ch) - 20;
+  const ox = (cw - win) / 2, oy = (ch - win) / 2;
+
+  if (bgModeSelect.value === 'checker') {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ox, oy, win, win);
+    ctx.clip();
+    drawCheckerBackdrop(ctx, cw, ch);
+    ctx.restore();
+  } else if (bgModeSelect.value === 'color') {
+    ctx.fillStyle = bgColorPicker.value;
+    ctx.fillRect(ox, oy, win, win);
+  }
+
+  const tmp = document.createElement('canvas');
+  tmp.width = win; tmp.height = win;
+  drawSourceInto(tmp.getContext('2d'), win, workingImg);
+  ctx.drawImage(tmp, ox, oy);
+
+  // Рамка региона.
+  ctx.strokeStyle = '#4da6ff88';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.strokeRect(ox, oy, win, win);
+  ctx.setLineDash([]);
+
+  // Фигура паттерна.
+  drawPatternShapeOverlay(ctx, ox, oy, win, currentMode());
+}
+
+function calcPeriod(mode, s) {
+  if (mode === 'hexagon' || mode === 'hexagon12') return { px: s * Math.sqrt(3), py: 3 * s };
+  if (mode === 'mirror') return { px: 2 * s, py: 2 * s };
+  return { px: s, py: s };
+}
+
+function getTileCountInPreview() {
+  const mode = currentMode();
+  const preview = patternCanvas.width;
+  const p = calcPeriod(mode, S);
+  const nX = Math.max(1, Math.round(preview / p.px));
+  const nY = Math.max(1, Math.round(preview / p.py));
+  return { nX, nY };
+}
+
+function calcExportParams(target) {
+  const mode = currentMode();
+  const { nX, nY } = getTileCountInPreview();
+  const isHex = (mode === 'hexagon' || mode === 'hexagon12');
+  const factor = (mode === 'mirror') ? 2 : 1;
+  if (isHex) {
+    const sFromX = target / (Math.sqrt(3) * nX);
+    const sFromY = target / (3 * nY);
+    const s = (sFromX + sFromY) / 2;
+    return { w: Math.round(s * Math.sqrt(3) * nX), h: Math.round(3 * s * nY), nX, nY, s };
+  }
+  const sInt = Math.max(1, Math.round(target / (nX * factor)));
+  return { w: nX * sInt * factor, h: nY * sInt * factor, nX, nY, s: sInt };
+}
+
+function updatePeriodInfo() {
+  const { nX, nY } = getTileCountInPreview();
+  countVal.textContent = `${nX} × ${nY}`;
+}
+
+function updateExportLine() {
+  const target = parseInt(exportSizeSelect.value, 10);
+  const e = calcExportParams(target);
+  exportLine.innerHTML = `${e.nX} × ${e.nY} tiles → ${e.w}×${e.h}`;
+}
+
+function updateBgHint() {
+  const mode = bgModeSelect.value;
+  const hints = {
+    'checker': 'Transparent checkerboard — outside is transparent in PNG.',
+    'color': 'Fill the outside area with a solid color.',
+    'blur': 'Blurred stretched copy of the image.',
+    'edge': 'Stretch outermost pixels of the whole image (contain).',
+    'edge-region': 'Stretch outermost pixels of what is visible in the region.',
+    'mirror': 'Reflect the whole image (contain) outwards.',
+    'mirror-region': 'Reflect edges of what is visible in the region.',
+  };
+  bgHint.textContent = hints[mode] || '';
+}
+
+let tooltipTimer = null;
+document.querySelectorAll('[data-tip]').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    if (tooltipTimer) clearTimeout(tooltipTimer);
+    tooltipTimer = setTimeout(() => {
+      tooltip.textContent = el.getAttribute('data-tip');
+      const rect = el.getBoundingClientRect();
+      const tipW = 260;
+      let left = rect.left + rect.width / 2 - tipW / 2;
+      let top = rect.top - 8;
+      if (left < 8) left = 8;
+      if (left + tipW > window.innerWidth - 8) left = window.innerWidth - tipW - 8;
+      tooltip.classList.remove('bottom');
+      if (top < 40) { top = rect.bottom + 8; tooltip.classList.add('bottom'); }
+      else {
+        const tipH = tooltip.offsetHeight || 60;
+        top = rect.top - tipH - 8;
+        if (top < 8) { top = rect.bottom + 8; tooltip.classList.add('bottom'); }
+      }
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+      tooltip.classList.add('visible');
+    }, 250);
+  });
+  el.addEventListener('mouseleave', () => {
+    if (tooltipTimer) clearTimeout(tooltipTimer);
+    tooltip.classList.remove('visible');
+  });
+});
+
+// ============ ГЕОМЕТРИЯ ============
+function vertex(center, k, s) {
+  const angle = (-90 + k * 60) * Math.PI / 180;
+  return { x: center.x + s * Math.cos(angle), y: center.y + s * Math.sin(angle) };
+}
+function edgeMid(center, k, s) {
+  const a = vertex(center, k, s), b = vertex(center, k + 1, s);
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+function reflectPoint(p, center, edgePoint) {
+  const dx = edgePoint.x - center.x, dy = edgePoint.y - center.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9) return { x: p.x, y: p.y };
+  const ux = dx / len, uy = dy / len;
+  const vx = p.x - center.x, vy = p.y - center.y;
+  const proj = vx * ux + vy * uy;
+  const perpx = vx - proj * ux, perpy = vy - proj * uy;
+  return { x: center.x + proj * ux - perpx, y: center.y + proj * uy - perpy };
+}
+function rotatePoint(p, center, angleRad) {
+  const dx = p.x - center.x, dy = p.y - center.y;
+  const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
+  return { x: center.x + dx * cos - dy * sin, y: center.y + dx * sin + dy * cos };
+}
+function sampleBilinearInto(data, w, h, x, y, out, oi) {
+  if (x < 0) x = 0; if (x > w - 1) x = w - 1;
+  if (y < 0) y = 0; if (y > h - 1) y = h - 1;
+  const x0 = Math.floor(x), y0 = Math.floor(y);
+  const x1 = Math.min(x0 + 1, w - 1), y1 = Math.min(y0 + 1, h - 1);
+  const fx = x - x0, fy = y - y0;
+  const i00 = (y0 * w + x0) * 4, i10 = (y0 * w + x1) * 4;
+  const i01 = (y1 * w + x0) * 4, i11 = (y1 * w + x1) * 4;
+  const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy);
+  const w01 = (1 - fx) * fy,       w11 = fx * fy;
+  for (let c = 0; c < 4; c++) {
+    out[oi + c] = data[i00 + c] * w00 + data[i10 + c] * w10
+                + data[i01 + c] * w01 + data[i11 + c] * w11;
+  }
+}
+
+// ============ БИЛДЕРЫ ПАТТЕРНОВ ============
+
+function buildHexagon(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const v0 = vertex(center, 0, s), v1 = vertex(center, 1, s);
+  const ax = (v0.x - center.x) / s, ay = (v0.y - center.y) / s;
+  const bx = (v1.x - center.x) / s, by = (v1.y - center.y) / s;
+  const det = ax * by - bx * ay;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const baseAngle = -90 * Math.PI / 180;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx) - baseAngle;
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / (Math.PI / 3));
+      if (k > 5) k = 5; if (k < 0) k = 0;
+      let p = { x, y };
+      p = rotatePoint(p, center, -Math.floor(k / 2) * (2 * Math.PI / 3));
+      if (k % 2 === 1) p = reflectPoint(p, center, v1);
+      const px = p.x - center.x, py = p.y - center.y;
+      const tileX = (px * by - py * bx) / det;
+      const tileY = (py * ax - px * ay) / det;
+      if (tileX < -0.6 || tileY < -0.6 || tileX + tileY > s + 0.6) continue;
+      sampleBilinearInto(tileData, tw, th, tileX, tileY, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildHexagon12(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const b0 = vertex(center, 0, s);
+  const b1 = edgeMid(center, 0, s);
+  const ax = (b0.x - center.x) / s, ay = (b0.y - center.y) / s;
+  const bx = (b1.x - center.x) / s, by = (b1.y - center.y) / s;
+  const det = ax * by - bx * ay;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const baseAngle = -90 * Math.PI / 180;
+  const SECTOR = Math.PI / 6, STEP = Math.PI / 3;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx) - baseAngle;
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 11) k = 11; if (k < 0) k = 0;
+      let p = { x, y };
+      p = rotatePoint(p, center, -Math.floor(k / 2) * STEP);
+      if (k % 2 === 1) p = reflectPoint(p, center, b1);
+      const px = p.x - center.x, py = p.y - center.y;
+      const tileX = (px * by - py * bx) / det;
+      const tileY = (py * ax - px * ay) / det;
+      if (tileX < -0.6 || tileY < -0.6 || tileX + tileY > s + 0.6) continue;
+      sampleBilinearInto(tileData, tw, th, tileX, tileY, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function squareBoundaryPoint(center, i, s) {
+  const angle = i * 45 * Math.PI / 180;
+  const r = (i % 2 === 1) ? (s / 2) * Math.SQRT2 : (s / 2);
+  return { x: center.x + r * Math.cos(angle), y: center.y + r * Math.sin(angle) };
+}
+
+function buildSquare8(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const b0 = squareBoundaryPoint(center, 0, s);
+  const b1 = squareBoundaryPoint(center, 1, s);
+  const ax = (b0.x - center.x) / s, ay = (b0.y - center.y) / s;
+  const bx = (b1.x - center.x) / s, by = (b1.y - center.y) / s;
+  const det = ax * by - bx * ay;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const SECTOR = Math.PI / 4, STEP = Math.PI / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx);
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 7) k = 7; if (k < 0) k = 0;
+      let p = { x, y };
+      p = rotatePoint(p, center, -Math.floor(k / 2) * STEP);
+      if (k % 2 === 1) p = reflectPoint(p, center, b1);
+      const px = p.x - center.x, py = p.y - center.y;
+      const tileX = (px * by - py * bx) / det;
+      const tileY = (py * ax - px * ay) / det;
+      if (tileX < -0.6 || tileY < -0.6 || tileX + tileY > s + 0.6) continue;
+      sampleBilinearInto(tileData, tw, th, tileX, tileY, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildSquare4(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const SECTOR = Math.PI / 2;
+  const half = s / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx);
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 3) k = 3; if (k < 0) k = 0;
+      let p = { x, y };
+      p = rotatePoint(p, center, -k * SECTOR);
+      const px = p.x - center.x, py = p.y - center.y;
+      if (px < 0 || py < 0 || px > half || py > half) continue;
+      const tx = (px / half) * tw;
+      const ty = (py / half) * th;
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildTriangle6(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const SECTOR = Math.PI / 3;
+  const half = s / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx);
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 5) k = 5; if (k < 0) k = 0;
+      let p = { x, y };
+      p = rotatePoint(p, center, -Math.floor(k / 2) * (2 * Math.PI / 3));
+      if (k % 2 === 1) p = { x: p.x, y: center.y - (p.y - center.y) };
+      const px = p.x - center.x, py = p.y - center.y;
+      const tileX = px + half;
+      const tileY = py + half;
+      if (tileX < 0 || tileY < 0 || tileX > s || tileY > s) continue;
+      const tx = (tileX / s) * tw;
+      const ty = (tileY / s) * th;
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildTriangle12(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const SECTOR = Math.PI / 6;
+  const half = s / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx);
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 11) k = 11; if (k < 0) k = 0;
+      let p = { x, y };
+      p = rotatePoint(p, center, -Math.floor(k / 2) * (Math.PI / 3));
+      if (k % 2 === 1) p = { x: p.x, y: center.y - (p.y - center.y) };
+      const px = p.x - center.x, py = p.y - center.y;
+      const tileX = px + half;
+      const tileY = py + half;
+      if (tileX < 0 || tileY < 0 || tileX > s || tileY > s) continue;
+      const tx = (tileX / s) * tw;
+      const ty = (tileY / s) * th;
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildKaleido(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const SECTOR = Math.PI / 4;
+  const half = s / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx);
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 7) k = 7; if (k < 0) k = 0;
+      let p = { x, y };
+      p = rotatePoint(p, center, -k * SECTOR);
+      const px = p.x - center.x, py = p.y - center.y;
+      const bis = Math.PI / 8;
+      const cos = Math.cos(-bis), sin = Math.sin(-bis);
+      let rx = px * cos - py * sin;
+      let ry = px * sin + py * cos;
+      rx = rx < 0 ? -rx : rx;
+      ry = ry < 0 ? -ry : ry;
+      const tx = Math.min(tw - 1, (rx / half) * tw);
+      const ty = Math.min(th - 1, (ry / half) * th);
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildRot180(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const half = s / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let px = dx, py = dy;
+      if (px < 0 || py < 0) { px = -px; py = -py; }
+      const tileX = px + half;
+      const tileY = py + half;
+      if (tileX < 0 || tileY < 0 || tileX > s || tileY > s) continue;
+      const tx = (tileX / s) * tw;
+      const ty = (tileY / s) * th;
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildGlide(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const rowPixels = Math.max(1, Math.round(s / 4));
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const outIdx = (y * W + x) * 4;
+      const row = Math.floor((y - center.y) / rowPixels);
+      let px = x - center.x, py = y - center.y;
+      if (row % 2 === 1) px = -px;
+      const tileX = ((px + s * 1000) % s + s) % s;
+      const tileY = ((py + s * 1000) % s + s) % s;
+      const tx = (tileX / s) * tw;
+      const ty = (tileY / s) * th;
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildPMM(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const half = s / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const outIdx = (y * W + x) * 4;
+      let px = x - center.x, py = y - center.y;
+      if (px < 0) px = -px;
+      if (py < 0) py = -py;
+      const tileX = px + half;
+      const tileY = py + half;
+      if (tileX < 0 || tileY < 0 || tileX > s || tileY > s) continue;
+      const tx = Math.min(tw - 1, (tileX / s) * tw);
+      const ty = Math.min(th - 1, (tileY / s) * th);
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildPenrose(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const SECTOR = Math.PI / 5;
+  const half = s / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx);
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 9) k = 9; if (k < 0) k = 0;
+      let p = { x, y };
+      p = rotatePoint(p, center, -k * SECTOR);
+      let px = p.x - center.x, py = p.y - center.y;
+      if (py < 0) py = -py;
+      const tileX = Math.min(px, half);
+      const tileY = Math.min(py, half);
+      const tx = Math.min(tw - 1, (tileX / half) * tw);
+      const ty = Math.min(th - 1, (tileY / half) * th);
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildHat(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const SECTOR = Math.PI / 3;
+  const half = s / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx) - Math.PI / 6;
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 5) k = 5; if (k < 0) k = 0;
+      let p = { x, y };
+      p = rotatePoint(p, center, -k * SECTOR);
+      const rayAngle = k * SECTOR;
+      const cos = Math.cos(-rayAngle), sin = Math.sin(-rayAngle);
+      const vx = p.x - center.x, vy = p.y - center.y;
+      const rx = vx * cos - vy * sin;
+      const ry = vx * sin + vy * cos;
+      const px = rx < 0 ? -rx : rx;
+      const py = ry < 0 ? -ry : ry;
+      const tileX = Math.min(px, half);
+      const tileY = Math.min(py, half);
+      const tx = Math.min(tw - 1, (tileX / half) * tw);
+      const ty = Math.min(th - 1, (tileY / half) * th);
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildPinwheel(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const PHI = (1 + Math.sqrt(5)) / 2;
+  const SECTOR = Math.PI * 2 / 10;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - center.x, dy = y - center.y;
+      const outIdx = (y * W + x) * 4;
+      let angle = Math.atan2(dy, dx);
+      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      let k = Math.floor(angle / SECTOR);
+      if (k > 9) k = 9; if (k < 0) k = 0;
+      const scaleK = Math.pow(1 / PHI, k);
+      let p = { x, y };
+      p = rotatePoint(p, center, -k * SECTOR);
+      const px = (p.x - center.x) / scaleK;
+      const py = (p.y - center.y) / scaleK;
+      const tileX = ((px + s * 1000) % s + s) % s;
+      const tileY = ((py + s * 1000) % s + s) % s;
+      const tx = (tileX / s) * tw;
+      const ty = (tileY / s) * th;
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+    }
+  }
+  octx.putImageData(outImg, 0, 0);
+  return out;
+}
+
+function buildTruchet(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const seed = (i) => {
+    const x = Math.sin(i * 12.9898) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  const cell = s / 2;
+  const nCols = Math.ceil(W / cell) + 2;
+  const nRows = Math.ceil(H / cell) + 2;
+  for (let row = -1; row < nRows; row++) {
+    for (let col = -1; col < nCols; col++) {
+      const id = (row * 73856093) ^ (col * 19349663);
+      const r = seed(id);
+      const rot = Math.floor(r * 4) * Math.PI / 2;
+      const flip = seed(id * 7) > 0.5;
+      const dx = col * cell;
+      const dy = row * cell;
+      octx.save();
+      octx.translate(dx + cell / 2, dy + cell / 2);
+      octx.rotate(rot);
+      if (flip) octx.scale(-1, 1);
+      octx.drawImage(tile, 0, 0, tw, th, -cell / 2, -cell / 2, cell, cell);
+      octx.restore();
+    }
+  }
+  return out;
+}
+
+function buildMoire(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const step = s;
+  const n = Math.ceil(Math.max(W, H) / step) + 2;
+
+  for (let i = -n; i < n; i++) {
+    for (let j = -n; j < n; j++) {
+      octx.drawImage(tile, i * step, j * step, tw, th);
+    }
+  }
+
+  octx.save();
+  octx.globalAlpha = 0.5;
+  octx.translate(W / 2, H / 2);
+  octx.rotate(0.05);
+  octx.translate(-W / 2, -H / 2);
+  for (let i = -n; i < n; i++) {
+    for (let j = -n; j < n; j++) {
+      octx.drawImage(tile, i * step, j * step, tw, th);
+    }
+  }
+  octx.restore();
+  return out;
+}
+
+function buildVoronoi(tile, W, H, center, s) {
+  const tw = tile.width, th = tile.height;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const seed = (i) => {
+    const x = Math.sin(i * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  const cell = s;
+  const nCols = Math.ceil(W / cell) + 2;
+  const nRows = Math.ceil(H / cell) + 2;
+  const cells = [];
+  for (let row = -1; row < nRows; row++) {
+    for (let col = -1; col < nCols; col++) {
+      const id = (row * 73856093) ^ (col * 19349663);
+      const jx = (seed(id) - 0.5) * cell * 0.4;
+      const jy = (seed(id * 3) - 0.5) * cell * 0.4;
+      const rot = seed(id * 5) * Math.PI * 2;
+      cells.push({ dx: col * cell + jx, dy: row * cell + jy, rot, id });
+    }
+  }
+  cells.sort((a, b) => a.id - b.id);
+  for (const d of cells) {
+    octx.save();
+    octx.translate(d.dx + cell / 2, d.dy + cell / 2);
+    octx.rotate(d.rot);
+    octx.drawImage(tile, 0, 0, tw, th, -cell / 2, -cell / 2, cell, cell);
+    octx.restore();
+  }
+  return out;
+}
+
+function buildMirrorBlock(tile, useMirror) {
+  const s = tile.width;
+  if (!useMirror) return tile;
+  const block = document.createElement('canvas');
+  block.width = s * 2; block.height = s * 2;
+  const bctx = block.getContext('2d');
+  bctx.drawImage(tile, 0, 0);
+  bctx.save(); bctx.translate(s * 2, 0); bctx.scale(-1, 1); bctx.drawImage(tile, 0, 0); bctx.restore();
+  bctx.save(); bctx.translate(0, s * 2); bctx.scale(1, -1); bctx.drawImage(tile, 0, 0); bctx.restore();
+  bctx.save(); bctx.translate(s * 2, s * 2); bctx.scale(-1, -1); bctx.drawImage(tile, 0, 0); bctx.restore();
+  return block;
+}
+
+function buildPatternElement(mode, tile, W, H, c, s) {
+  if (mode === 'hexagon') return buildHexagon(tile, W, H, c, s);
+  if (mode === 'hexagon12') return buildHexagon12(tile, W, H, c, s);
+  if (mode === 'square8') return buildSquare8(tile, W, H, c, s);
+  if (mode === 'square4') return buildSquare4(tile, W, H, c, s);
+  if (mode === 'triangle6') return buildTriangle6(tile, W, H, c, s);
+  if (mode === 'triangle12') return buildTriangle12(tile, W, H, c, s);
+  if (mode === 'kaleido') return buildKaleido(tile, W, H, c, s);
+  if (mode === 'rot180') return buildRot180(tile, W, H, c, s);
+  if (mode === 'glide') return buildGlide(tile, W, H, c, s);
+  if (mode === 'pmm') return buildPMM(tile, W, H, c, s);
+  if (mode === 'penrose') return buildPenrose(tile, W, H, c, s);
+  if (mode === 'hat') return buildHat(tile, W, H, c, s);
+  if (mode === 'pinwheel') return buildPinwheel(tile, W, H, c, s);
+  if (mode === 'truchet') return buildTruchet(tile, W, H, c, s);
+  if (mode === 'moire') return buildMoire(tile, W, H, c, s);
+  if (mode === 'voronoi') return buildVoronoi(tile, W, H, c, s);
+  return buildMirrorBlock(tile, mode === 'mirror');
+}
+
+function paintBackdropIfChecker(ctx, w, h) {
+  if (bgModeSelect.value === 'checker') drawCheckerBackdrop(ctx, w, h);
+}
+
+function drawThumb() {
+  if (!workingImg) return;
+  thumbCtx.clearRect(0, 0, 64, 64);
+  const mode = currentMode();
+  const tileCanvas = buildTileCanvas(Math.max(8, Math.min(S, 256)), workingImg);
+  const c = { x: S / 2, y: S / 2 };
+  let el;
+  if (mode === 'truchet' || mode === 'moire' || mode === 'voronoi') {
+    el = buildPatternElement(mode, tileCanvas, 64, 64, { x: 32, y: 32 }, S);
+  } else if (mode === 'hexagon' || mode === 'hexagon12') {
+    const boxW = Math.ceil(S * Math.sqrt(3) * 1.1);
+    const boxH = Math.ceil(S * 2.05);
+    el = buildPatternElement(mode, tileCanvas, boxW, boxH, { x: boxW/2, y: boxH/2 }, S);
+  } else if (mode === 'mirror' || mode === 'grid') {
+    el = buildMirrorBlock(tileCanvas, mode === 'mirror');
+  } else {
+    el = buildPatternElement(mode, tileCanvas, S, S, c, S);
+  }
+  const sc = Math.min(64 / el.width, 64 / el.height);
+  const dw = el.width * sc, dh = el.height * sc;
+  thumbCtx.drawImage(el, (64 - dw) / 2, (64 - dh) / 2, dw, dh);
+}
+
+function drawPatternPreview() {
+  patternPreviewCtx.clearRect(0, 0, 60, 60);
+  patternPreviewCtx.fillStyle = '#000';
+  patternPreviewCtx.fillRect(0, 0, 60, 60);
+  if (!workingImg) return;
+  const mode = currentMode();
+  const savedS = S;
+  S = 24;
+  try {
+    const tile = buildTileCanvas(24, workingImg);
+    const c = { x: 12, y: 12 };
+    let el;
+    if (mode === 'truchet' || mode === 'moire' || mode === 'voronoi') {
+      el = buildPatternElement(mode, tile, 60, 60, { x: 30, y: 30 }, 24);
+    } else if (mode === 'hexagon' || mode === 'hexagon12') {
+      const boxW = Math.ceil(24 * Math.sqrt(3) * 1.1);
+      const boxH = Math.ceil(24 * 2.05);
+      el = buildPatternElement(mode, tile, boxW, boxH, { x: boxW/2, y: boxH/2 }, 24);
+    } else if (mode === 'mirror' || mode === 'grid') {
+      el = buildMirrorBlock(tile, mode === 'mirror');
+    } else {
+      el = buildPatternElement(mode, tile, 24, 24, c, 24);
+    }
+    const sc = Math.min(60 / el.width, 60 / el.height);
+    const dw = el.width * sc, dh = el.height * sc;
+    patternPreviewCtx.drawImage(el, (60 - dw) / 2, (60 - dh) / 2, dw, dh);
+  } finally {
+    S = savedS;
+  }
+}
+
+function paintPattern(ctx, W, H, mode, tile, overrideNX, overrideNY) {
+  ctx.clearRect(0, 0, W, H);
+  paintBackdropIfChecker(ctx, W, H);
+
+  const counts = (overrideNX != null && overrideNY != null)
+    ? { nX: overrideNX, nY: overrideNY }
+    : getTileCountInPreview();
+
+  if (mode === 'hexagon' || mode === 'hexagon12') {
+    const boxW = Math.ceil(S * Math.sqrt(3) * 1.1);
+    const boxH = Math.ceil(S * 2.05);
+    const boxCenter = { x: boxW / 2, y: boxH / 2 };
+    const hexTile = buildPatternElement(mode, tile, boxW, boxH, boxCenter, S);
+    const stepX = S * Math.sqrt(3), stepY = 1.5 * S;
+    const nCols = Math.ceil(W / stepX) + 4, nRows = Math.ceil(H / stepY) + 4;
+    for (let row = -3; row < nRows; row++) {
+      const hy = row * stepY;
+      const xShift = (row % 2 === 0) ? 0 : stepX / 2;
+      for (let col = -3; col < nCols; col++) {
+        const hx = col * stepX + xShift;
+        ctx.drawImage(hexTile, Math.round(hx - boxCenter.x), Math.round(hy - boxCenter.y));
+      }
+    }
+    return;
+  }
+
+  if (mode === 'truchet' || mode === 'moire' || mode === 'voronoi') {
+    const el = buildPatternElement(mode, tile, W, H, { x: W/2, y: H/2 }, S);
+    ctx.drawImage(el, 0, 0);
+    return;
+  }
+
+  const c = { x: S / 2, y: S / 2 };
+  let sqTile;
+  if (mode === 'mirror' || mode === 'grid') {
+    sqTile = buildMirrorBlock(tile, mode === 'mirror');
+  } else {
+    sqTile = buildPatternElement(mode, tile, S, S, c, S);
+  }
+
+  const xs = [], ys = [];
+  for (let i = 0; i <= counts.nX; i++) xs.push(Math.round(i * W / counts.nX));
+  for (let j = 0; j <= counts.nY; j++) ys.push(Math.round(j * H / counts.nY));
+  for (let j = 0; j < counts.nY; j++) {
+    for (let i = 0; i < counts.nX; i++) {
+      ctx.drawImage(sqTile, 0, 0, sqTile.width, sqTile.height,
+                    xs[i], ys[j], xs[i+1]-xs[i], ys[j+1]-ys[j]);
+    }
+  }
+}
+
+let rafPending = false;
+function render() {
+  if (rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => {
+    rafPending = false;
+    drawSelector();
+    draw();
+    updatePeriodInfo();
+    updateExportLine();
+    drawThumb();
+  });
+}
+
+function draw() {
+  if (!workingImg) return;
+  const mode = currentMode();
+  const W = patternCanvas.width, H = patternCanvas.height;
+  const target = parseInt(exportSizeSelect.value, 10);
+  const e = calcExportParams(target);
+
+  const cacheKey = e.w + 'x' + e.h + '|' + mode;
+  let off;
+  if (offCanvasCache.key === cacheKey && offCanvasCache.canvas
+      && offCanvasCache.canvas.width === e.w && offCanvasCache.canvas.height === e.h) {
+    off = offCanvasCache.canvas;
+    off.getContext('2d').clearRect(0, 0, e.w, e.h);
+  } else {
+    off = document.createElement('canvas');
+    off.width = e.w; off.height = e.h;
+    offCanvasCache.key = cacheKey;
+    offCanvasCache.canvas = off;
+  }
+
+  const tileE = buildTileCanvas(e.s, workingImg);
+  const savedS = S;
+  S = e.s;
+  try {
+    paintPattern(off.getContext('2d'), e.w, e.h, mode, tileE, e.nX, e.nY);
+  } finally {
+    S = savedS;
+  }
+
+  patCtx.clearRect(0, 0, W, H);
+  if (bgModeSelect.value === 'checker') drawCheckerBackdrop(patCtx, W, H);
+  else if (bgModeSelect.value === 'color') {
+    patCtx.fillStyle = bgColorPicker.value;
+    patCtx.fillRect(0, 0, W, H);
+  } else {
+    patCtx.fillStyle = '#000';
+    patCtx.fillRect(0, 0, W, H);
+  }
+  const scale = Math.min(W / e.w, H / e.h);
+  const dw = e.w * scale, dh = e.h * scale;
+  const dx = (W - dw) / 2, dy = (H - dh) / 2;
+  patCtx.imageSmoothingEnabled = true;
+  patCtx.imageSmoothingQuality = 'high';
+  patCtx.drawImage(off, dx, dy, dw, dh);
+}
+
+function canvasToTGABlob(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const src = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+  const header = new Uint8Array(18);
+  header[2] = 2;
+  header[12] = w & 0xFF; header[13] = (w >> 8) & 0xFF;
+  header[14] = h & 0xFF; header[15] = (h >> 8) & 0xFF;
+  header[16] = 32; header[17] = 0x28;
+  const pixels = new Uint8Array(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    const si = i * 4;
+    pixels[si] = src[si + 2]; pixels[si + 1] = src[si + 1];
+    pixels[si + 2] = src[si]; pixels[si + 3] = src[si + 3];
+  }
+  return new Blob([header, pixels], { type: 'application/octet-stream' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildFinalCanvas() {
+  if (!workingImg) return null;
+  const mode = currentMode();
+  const target = parseInt(exportSizeSelect.value, 10);
+  const e = calcExportParams(target);
+  const sc = sourceImg.width / workingImg.width;
+
+  const c = document.createElement('canvas');
+  c.width = e.w; c.height = e.h;
+  const ctx = c.getContext('2d');
+
+  const oldWorking = workingImg;
+  const oldCenter = { ...viewCenter };
+  const oldS = S;
+  const oldTileKey = tileCache.key, oldTileCanvas = tileCache.canvas;
+  const oldEdgeKey = edgeCache.key, oldEdgeCanvas = edgeCache.canvas;
+
+  try {
+    workingImg = sourceImg;
+    viewCenter = { x: oldCenter.x * sc, y: oldCenter.y * sc };
+    let Sbig = e.s * sc;
+    if (Sbig > MAX_TILE_SIDE) Sbig = MAX_TILE_SIDE;
+    S = Sbig;
+    invalidateCaches();
+
+    const sizePx = Math.max(1, Math.ceil(S));
+    const tileFromOriginal = document.createElement('canvas');
+    tileFromOriginal.width = tileFromOriginal.height = sizePx;
+    drawSourceInto(tileFromOriginal.getContext('2d'), sizePx, sourceImg);
+
+    if (bgModeSelect.value === 'checker') {
+      // прозрачный
+    } else if (bgModeSelect.value === 'color') {
+      ctx.fillStyle = bgColorPicker.value;
+      ctx.fillRect(0, 0, e.w, e.h);
+    } else {
+      drawEdgeBackgroundWithImg(ctx, e.w, e.h, sourceImg);
+    }
+
+    paintPattern(ctx, e.w, e.h, mode, tileFromOriginal, e.nX, e.nY);
+  } finally {
+    workingImg = oldWorking;
+    viewCenter = oldCenter;
+    S = oldS;
+    tileCache.key = oldTileKey; tileCache.canvas = oldTileCanvas;
+    edgeCache.key = oldEdgeKey; edgeCache.canvas = oldEdgeCanvas;
+  }
+  return c;
+}
+
+downloadBtn.addEventListener('click', () => {
+  if (!workingImg) { alert('Choose a photo first.'); return; }
+  showToast('Rendering...');
+  setTimeout(() => {
+    const canvas = buildFinalCanvas();
+    const format = exportFormatSelect.value;
+    let outCanvas = canvas;
+    if (format === 'jpeg') {
+      const flat = document.createElement('canvas');
+      flat.width = canvas.width; flat.height = canvas.height;
+      const fctx = flat.getContext('2d');
+      fctx.fillStyle = '#ffffff';
+      fctx.fillRect(0, 0, canvas.width, canvas.height);
+      fctx.drawImage(canvas, 0, 0);
+      outCanvas = flat;
+    }
+    if (format === 'tga') {
+      downloadBlob(canvasToTGABlob(outCanvas), `pattern_${outCanvas.width}x${outCanvas.height}.tga`);
+    } else {
+      const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+      const ext = format === 'jpeg' ? 'jpg' : 'png';
+      outCanvas.toBlob((blob) => {
+        downloadBlob(blob, `pattern_${outCanvas.width}x${outCanvas.height}.${ext}`);
+        showToast('Saved!');
+      }, mime, 0.95);
+    }
+  }, 50);
+});
+
+copyBtn.addEventListener('click', async () => {
+  if (!workingImg) { alert('Choose a photo first.'); return; }
+  showToast('Rendering...');
+  setTimeout(async () => {
+    const canvas = buildFinalCanvas();
+    try {
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showToast('📋 Copied to clipboard!');
+    } catch (err) {
+      showToast('Failed. Try Download instead.');
+    }
+  }, 50);
+});
+
+// ============ ИНИЦИАЛИЗАЦИЯ ============
+S = sliderToS(parseFloat(countSlider.value));
+currentModeVal = patternSelect.value;
+updatePeriodInfo();
+updateExportLine();
+updateBgHint();
+drawSelector();
+drawPatternPreview();
+</script>
+</body>
+</html>
