@@ -44,30 +44,17 @@ wallpaper symmetry groups to modern aperiodic tilings like Penrose and Truchet.
 <td width="50%">
 
 **Hexagon**
-<img src="screens/hexagon.png" width="100%">
+<img src="screens/pattern_1005x1044 (1).png" width="100%">
 
 </td>
 <td width="50%">
 
 **Kaleidoscope**
-<img src="screens/kaleido.png" width="100%">
+<img src="screens/pattern_1005x1044.png" width="100%">
 
 </td>
 </tr>
-<tr>
-<td width="50%">
 
-**Penrose**
-<img src="screens/penrose.png" width="100%">
-
-</td>
-<td width="50%">
-
-**Truchet**
-<img src="screens/truchet.png" width="100%">
-
-</td>
-</tr>
 </table>
 
 </div>
