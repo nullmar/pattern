@@ -5,10 +5,9 @@
 **Turn any photo into a seamless tile pattern — in your browser.**
 
 [![Open Tool](https://img.shields.io/badge/▶_Open_Tool-2d6cdf?style=for-the-badge&logoColor=white)](https://nullmar.github.io/pattern/)
-[![License](https://img.shields.io/badge/license-MIT-4d8af0?style=for-the-badge)](LICENSE)
-[![No uploads](https://img.shields.io/badge/100%25_client--side-no_uploads-4ade80?style=for-the-badge&logoColor=white)](#)
 
-<img src="preview.png" alt="Pattern Studio preview" width="100%">
+
+
 
 </div>
 
@@ -135,12 +134,3 @@ wallpaper symmetry groups to modern aperiodic tilings like Penrose and Truchet.
 | **Mirror (region)** | Reflect edges of what is visible in the region |
 
 ---
-
-## 🛠️ Run locally
-
-Just open `index.html` — no build step, no dependencies.
-
-Or serve with any static server:
-
-```bash
-python3 -m http.server 8000
