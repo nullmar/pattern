@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Pattern — Create From Image</title>
 <style>
   :root{
     --bg:#2b2b2b; --panel:#383838; --panel2:#454545; --border:#1e1e1e;
     --text:#e8e8e8; --muted:#9a9a9a; --accent:#2d6cdf;
+    --app-h:100vh;
   }
+  @supports (height:100dvh) { :root { --app-h:100dvh; } }
   * { box-sizing:border-box; }
   body {
     background:var(--bg); color:var(--text);
     font-family: -apple-system, "Segoe UI", sans-serif;
-    margin:0; padding:0; overflow:hidden; height:100vh;
+    margin:0; padding:0; overflow:hidden; height:var(--app-h);
   }
   #dropOverlay {
     position:fixed; top:0; left:0; right:0; bottom:0;
@@ -26,13 +28,13 @@
     background:rgba(0,0,0,0.8); color:#fff;
     padding:24px 40px; border-radius:8px; font-size:20px; font-weight:600;
   }
-  .content { height:100vh; display:grid; grid-template-columns: 1fr 340px; overflow:hidden; }
+  .content { height:var(--app-h); display:grid; grid-template-columns: minmax(0,1fr) 340px; grid-template-rows:minmax(0,1fr); overflow:hidden; }
   .center-col {
     background:#1a1a1a; display:flex; align-items:center; justify-content:center;
-    overflow:hidden; padding:16px; position:relative;
+    overflow:hidden; padding:16px; position:relative; min-height:0; min-width:0;
   }
   .center-col canvas { max-width:100%; max-height:100%; display:block; background:#000; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-  .right-col { background:var(--panel); border-left:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; height:100vh; }
+  .right-col { background:var(--panel); border-left:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; height:100%; min-height:0; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
   .section { padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
   .section .section-title {
     display:flex; align-items:center; gap:6px;
@@ -196,7 +198,7 @@
   }
   .palette-swatch:hover { transform: scale(1.1); border-color:var(--accent); }
   .export-block { margin-top:auto; border-top:2px solid var(--accent); background:#2f2f2f; flex-shrink:0; }
-  .bottom-actions { padding:12px 16px; display:flex; flex-direction:column; gap:8px; }
+  .bottom-actions { padding:12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); display:flex; flex-direction:column; gap:8px; }
   .bottom-actions button {
     width:100%; padding:10px 12px; border-radius:4px;
     font-size:12px; cursor:pointer; border:none;
@@ -228,9 +230,9 @@
   }
   #toast.visible { opacity: 1; transform:translateX(-50%) translateY(0); }
   @media (max-width: 700px) {
-    .content { grid-template-columns: 1fr; grid-template-rows: 45vh 55vh; height:100vh; }
+    .content { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,40%) minmax(0,60%); height:var(--app-h); }
     .center-col { padding:8px; }
-    .right-col { border-left:none; border-top:1px solid var(--border); height:55vh; }
+    .right-col { border-left:none; border-top:1px solid var(--border); height:100%; }
     .thumb-box { width:48px; height:48px; }
     .thumb-box canvas { width:48px; height:48px; }
     .source-preview canvas { touch-action: none; }
@@ -286,27 +288,29 @@
             <canvas id="patternPreview" width="60" height="60"></canvas>
           </div>
           <select id="patternSelect" style="flex:1;">
-            <optgroup label="Symmetry groups">
+            <optgroup label="Seamless (any photo)">
               <option value="hexagon" selected>Hexagon (6 sectors)</option>
               <option value="hexagon12">Hexagon 12 (12 sectors)</option>
               <option value="square8">Square 8 (rhombus)</option>
-              <option value="square4">Square 4 (90° rotation)</option>
-              <option value="triangle6">Triangle 6</option>
-              <option value="triangle12">Triangle 12</option>
+              <option value="square4">Square 4 (mirrored)</option>
+              <option value="triangle6">Triangle 6 (no stretch)</option>
+              <option value="triangle12">Triangle 12 (no stretch)</option>
               <option value="kaleido">Kaleidoscope</option>
               <option value="mirror">Mirror 2×2</option>
-              <option value="grid">Grid (no mirrors)</option>
-              <option value="rot180">Rotation 180°</option>
-              <option value="glide">Glide reflection</option>
+              <option value="rot180">Diamond mirror (cmm)</option>
               <option value="pmm">Rectangular (pmm)</option>
+              <option value="moire">Moiré (mirror layers)</option>
             </optgroup>
-            <optgroup label="Aperiodic / decorative">
-              <option value="penrose">Penrose (rhombs)</option>
-              <option value="hat">Hat (monotile-ish)</option>
-              <option value="pinwheel">Pinwheel</option>
-              <option value="truchet">Truchet tiles</option>
-              <option value="moire">Moiré</option>
-              <option value="voronoi">Voronoi (pseudo)</option>
+            <optgroup label="Plain repeat (depends on photo)">
+              <option value="grid">Grid (no mirrors)</option>
+              <option value="glide">Glide rows (has seams)</option>
+            </optgroup>
+            <optgroup label="Decorative">
+              <option value="truchet">Truchet tiles (edges wrap)</option>
+              <option value="voronoi">Voronoi collage (edges wrap)</option>
+              <option value="penrose">Penrose 10-fold (medallion)</option>
+              <option value="hat">Hat 6-fold (medallion)</option>
+              <option value="pinwheel">Twisted star (medallion)</option>
             </optgroup>
           </select>
         </div>
@@ -376,12 +380,10 @@
       <div class="section-body">
         <select id="bgModeSelect">
           <option value="checker" selected>Checker (transparent)</option>
+          <option value="mirror">Mirror (reflect borders)</option>
           <option value="color">Solid color</option>
           <option value="blur">Blurred image</option>
-          <option value="edge">Edge (whole image contain)</option>
-          <option value="edge-region">Edge (region-aware)</option>
-          <option value="mirror">Mirror (whole image contain)</option>
-          <option value="mirror-region">Mirror (region-aware)</option>
+          <option value="edge">Edge (stretch borders)</option>
         </select>
         <input type="color" id="bgColorPicker" value="#000000" style="display:none;">
         <div class="hint" id="bgHint">Transparent checkerboard.</div>
@@ -466,8 +468,16 @@ let workingImg = null;
 let viewCenter = { x: 0, y: 0 };
 let panStart = null;
 let currentModeVal = 'hexagon';
-let tileCache = { key: '', canvas: null };
-let edgeCache = { key: '', canvas: null };
+let avgColor = '#000';
+function makeLRU(max) {
+  const m = new Map();
+  return {
+    get(k) { if (!m.has(k)) return null; const v = m.get(k); m.delete(k); m.set(k, v); return v; },
+    set(k, v) { m.set(k, v); while (m.size > max) m.delete(m.keys().next().value); },
+    clear() { m.clear(); }
+  };
+}
+const tileCache = makeLRU(8);
 const offCanvasCache = { key: '', canvas: null };
 
 const MAX_WORK_SIZE = 2000;
@@ -506,8 +516,7 @@ function showToast(msg) {
 }
 
 function invalidateCaches() {
-  tileCache.key = '';
-  edgeCache.key = '';
+  tileCache.clear();
   offCanvasCache.key = '';
 }
 
@@ -518,6 +527,7 @@ function loadImage(img, name) {
     workingImg = wImg;
     viewCenter = { x: wImg.width / 2, y: wImg.height / 2 };
     invalidateCaches();
+    avgColor = computeAvgColor(wImg);
     extractPalette();
     render();
     drawPatternPreview();
@@ -531,24 +541,25 @@ function loadImage(img, name) {
     cctx.imageSmoothingEnabled = true;
     cctx.imageSmoothingQuality = 'high';
     cctx.drawImage(img, 0, 0, c.width, c.height);
-    const wImg = new Image();
-    wImg.onload = () => finalize(wImg);
-    wImg.src = c.toDataURL();
+    finalize(c); // канвас годится как источник — не гоняем через PNG dataURL
   } else {
     finalize(img);
   }
   if (name) fileLabel.textContent = name;
 }
 
+let lastObjectUrl = null;
 function loadImageFromFile(file) {
   if (!file || !file.type.startsWith('image/')) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => loadImage(img, file.name);
-    img.src = e.target.result;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+    lastObjectUrl = url;
+    loadImage(img, file.name);
   };
-  reader.readAsDataURL(file);
+  img.onerror = () => { URL.revokeObjectURL(url); showToast('Cannot read this image'); };
+  img.src = url;
 }
 
 fileBtn.addEventListener('click', () => fileInput.click());
@@ -747,13 +758,41 @@ function getCanvasPos(e) {
   return { x: cx * sc, y: cy * sc };
 }
 
+let pinch = null;
+function touchDist(e) { return Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
+function clampView() {
+  if (!workingImg) return;
+  viewCenter.x = Math.min(workingImg.width, Math.max(0, viewCenter.x));
+  viewCenter.y = Math.min(workingImg.height, Math.max(0, viewCenter.y));
+}
+function setScaleValue(v) {
+  v = Math.max(10, Math.min(500, v));
+  scaleSlider.value = v;
+  scaleVal.textContent = Math.round(v);
+  invalidateCaches();
+  drawSelector();
+  scheduleHeavyRender();
+}
+
 function startPan(e) {
   if (!workingImg) return;
   e.preventDefault();
+  if (e.touches && e.touches.length === 2) {
+    pinch = { d: touchDist(e), v: parseFloat(scaleSlider.value) };
+    panStart = null;
+    return;
+  }
   const p = getCanvasPos(e);
   panStart = { x: p.x, y: p.y, center: { ...viewCenter } };
 }
 function movePan(e) {
+  if (pinch && e.touches && e.touches.length === 2 && workingImg) {
+    e.preventDefault();
+    const z0 = MIN_ZOOM * Math.pow(MAX_ZOOM / MIN_ZOOM, (pinch.v - 10) / 490);
+    const z = z0 * (touchDist(e) / pinch.d);
+    setScaleValue(10 + 490 * Math.log(z / MIN_ZOOM) / Math.log(MAX_ZOOM / MIN_ZOOM));
+    return;
+  }
   if (!panStart || !workingImg) return;
   e.preventDefault();
   const p = getCanvasPos(e);
@@ -768,11 +807,12 @@ function movePan(e) {
   const invdx = (dxs * cos + dys * sin) / drawScale;
   const invdy = (-dxs * sin + dys * cos) / drawScale;
   viewCenter = { x: panStart.center.x - invdx, y: panStart.center.y - invdy };
+  clampView();
   invalidateCaches();
   drawSelector();
   scheduleHeavyRender();
 }
-function endPan() { panStart = null; }
+function endPan(e) { panStart = null; if (!e || !e.touches || e.touches.length < 2) pinch = null; }
 
 selectorCanvas.addEventListener('mousedown', startPan);
 window.addEventListener('mousemove', movePan);
@@ -780,278 +820,147 @@ window.addEventListener('mouseup', endPan);
 selectorCanvas.addEventListener('touchstart', startPan, { passive: false });
 selectorCanvas.addEventListener('touchmove', movePan, { passive: false });
 selectorCanvas.addEventListener('touchend', endPan);
+selectorCanvas.addEventListener('wheel', (e) => {
+  if (!workingImg) return;
+  e.preventDefault();
+  setScaleValue(parseFloat(scaleSlider.value) + (e.deltaY < 0 ? 12 : -12));
+}, { passive: false });
 
 // ============ ФОН ============
 
-function containRect(imgW, imgH, w, h, padding = 0.98) {
-  const scale = Math.min(w / imgW, h / imgH) * padding;
-  const dw = imgW * scale, dh = imgH * scale;
-  return { dx: (w - dw) / 2, dy: (h - dh) / 2, dw, dh };
+function computeAvgColor(img) {
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = 16;
+    const x = c.getContext('2d');
+    x.imageSmoothingEnabled = true;
+    x.imageSmoothingQuality = 'high';
+    x.drawImage(img, 0, 0, 16, 16);
+    const d = x.getImageData(0, 0, 16, 16).data;
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3] / 255;
+      r += d[i] * a; g += d[i + 1] * a; b += d[i + 2] * a; n += a;
+    }
+    if (n < 1e-6) return '#000';
+    return 'rgb(' + Math.round(r / n) + ',' + Math.round(g / n) + ',' + Math.round(b / n) + ')';
+  } catch (e) { return '#000'; }
 }
 
-function chamferFill(imgData, W, H) {
-  const data = imgData.data;
-  const N = W * H;
-  const INF = 0x7fffffff;
-  const dist = new Int32Array(N);
-  const srcIdx = new Int32Array(N);
-  for (let i = 0; i < N; i++) {
-    if (data[i * 4 + 3] > 0) { dist[i] = 0; srcIdx[i] = i; }
-    else { dist[i] = INF; srcIdx[i] = -1; }
-  }
-  const D1 = 100, D2 = 141;
-  for (let y = 0; y < H; y++) {
-    const row = y * W;
-    for (let x = 0; x < W; x++) {
-      const i = row + x;
-      if (dist[i] === 0) continue;
-      let best = dist[i], bestSrc = srcIdx[i];
-      if (x > 0) { const j = i - 1; const d = dist[j] + D1; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
-      if (y > 0) { const j = i - W; const d = dist[j] + D1; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
-      if (x > 0 && y > 0) { const j = i - W - 1; const d = dist[j] + D2; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
-      if (x < W - 1 && y > 0) { const j = i - W + 1; const d = dist[j] + D2; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
-      dist[i] = best; srcIdx[i] = bestSrc;
-    }
-  }
-  for (let y = H - 1; y >= 0; y--) {
-    const row = y * W;
-    for (let x = W - 1; x >= 0; x--) {
-      const i = row + x;
-      if (dist[i] === 0) continue;
-      let best = dist[i], bestSrc = srcIdx[i];
-      if (x < W - 1) { const j = i + 1; const d = dist[j] + D1; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
-      if (y < H - 1) { const j = i + W; const d = dist[j] + D1; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
-      if (x < W - 1 && y < H - 1) { const j = i + W + 1; const d = dist[j] + D2; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
-      if (x > 0 && y < H - 1) { const j = i + W - 1; const d = dist[j] + D2; if (d < best) { best = d; bestSrc = srcIdx[j]; } }
-      dist[i] = best; srcIdx[i] = bestSrc;
-    }
-  }
-  for (let i = 0; i < N; i++) {
-    if (data[i * 4 + 3] > 0) continue;
-    const s = srcIdx[i];
-    if (s < 0) continue;
-    data[i * 4]     = data[s * 4];
-    data[i * 4 + 1] = data[s * 4 + 1];
-    data[i * 4 + 2] = data[s * 4 + 2];
-    data[i * 4 + 3] = 255;
-  }
+// Единая трансформация «пространство фото -> пространство тайла».
+// И фон, и само фото рисуются через неё, поэтому фон всегда совпадает с фото
+// при любом Scale / Rotation / положении области.
+function viewDrawScale(sizePx, img) {
+  let ds = sizePx / sideImgForImg(img);
+  if (ds > MAX_DRAW_SCALE) ds = MAX_DRAW_SCALE;
+  if (ds < 0.01) ds = 0.01;
+  return ds;
+}
+function applyViewTransform(ctx, sizePx, img) {
+  const ds = viewDrawScale(sizePx, img);
+  ctx.translate(sizePx / 2, sizePx / 2);
+  ctx.rotate(parseFloat(rotSlider.value) * Math.PI / 180);
+  ctx.scale(ds, ds);
+  ctx.translate(-viewCenter.x, -viewCenter.y);
 }
 
 function drawImageTransformed(ctx, sizePx, img) {
   if (!img) return;
-  const side = sideImgForImg(img);
-  let drawScale = sizePx / side;
-  if (drawScale > MAX_DRAW_SCALE) drawScale = MAX_DRAW_SCALE;
-  if (drawScale < 0.01) drawScale = 0.01;
-  const rot = parseFloat(rotSlider.value) * Math.PI / 180;
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.translate(sizePx / 2, sizePx / 2);
-  ctx.rotate(rot);
-  ctx.scale(drawScale, drawScale);
-  ctx.translate(-viewCenter.x, -viewCenter.y);
+  applyViewTransform(ctx, sizePx, img);
   ctx.drawImage(img, 0, 0);
   ctx.restore();
 }
 
-function buildEdgeWhole(sizePx, img) {
-  const SMALL = Math.min(160, sizePx);
-  const off = document.createElement('canvas');
-  off.width = off.height = SMALL;
-  const offCtx = off.getContext('2d');
-  const { dx, dy, dw, dh } = containRect(img.width, img.height, SMALL, SMALL);
-  offCtx.drawImage(img, dx, dy, dw, dh);
-  const imgData = offCtx.getImageData(0, 0, SMALL, SMALL);
-  chamferFill(imgData, SMALL, SMALL);
-  offCtx.putImageData(imgData, 0, 0);
-  const out = document.createElement('canvas');
-  out.width = out.height = sizePx;
-  const octx = out.getContext('2d');
-  octx.imageSmoothingEnabled = true;
-  octx.imageSmoothingQuality = 'high';
-  octx.drawImage(off, 0, 0, sizePx, sizePx);
-  return out;
+// Ограничивающий прямоугольник области тайла в координатах фото (с запасом).
+function regionBoundsInImage(sizePx, img) {
+  const ds = viewDrawScale(sizePx, img);
+  const r = (sizePx / ds) * Math.SQRT1_2 + 2; // половина диагонали квадрата области
+  return { xmin: viewCenter.x - r, xmax: viewCenter.x + r, ymin: viewCenter.y - r, ymax: viewCenter.y + r, ds };
+}
+function regionInsideImage(sizePx, img) {
+  const q = regionBoundsInImage(sizePx, img);
+  return q.xmin >= 0 && q.ymin >= 0 && q.xmax <= img.width && q.ymax <= img.height;
 }
 
-function buildEdgeRegion(sizePx, img) {
-  const SMALL = Math.min(160, sizePx);
-  const off = document.createElement('canvas');
-  off.width = off.height = SMALL;
-  const offCtx = off.getContext('2d');
-  const k = SMALL / sizePx;
-  const side = sideImgForImg(img);
-  let drawScale = sizePx / side * k;
-  if (drawScale > MAX_DRAW_SCALE * k) drawScale = MAX_DRAW_SCALE * k;
-  if (drawScale < 0.01 * k) drawScale = 0.01 * k;
-  const rot = parseFloat(rotSlider.value) * Math.PI / 180;
-  offCtx.save();
-  offCtx.imageSmoothingEnabled = true;
-  offCtx.imageSmoothingQuality = 'high';
-  offCtx.translate(SMALL / 2, SMALL / 2);
-  offCtx.rotate(rot);
-  offCtx.scale(drawScale, drawScale);
-  offCtx.translate(-viewCenter.x, -viewCenter.y);
-  offCtx.drawImage(img, 0, 0);
-  offCtx.restore();
+// mode: 'edge' — тянем крайние пиксели, 'mirror' — отражаем фото относительно его границ.
+function drawBorderFill(ctx, sizePx, img, mode) {
+  const w = img.width, h = img.height;
+  const q = regionBoundsInImage(sizePx, img);
+  if (q.xmin >= 0 && q.ymin >= 0 && q.xmax <= w && q.ymax <= h) return;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  applyViewTransform(ctx, sizePx, img);
 
-  const imgData = offCtx.getImageData(0, 0, SMALL, SMALL);
-  chamferFill(imgData, SMALL, SMALL);
-  offCtx.putImageData(imgData, 0, 0);
+  // Edge-заливка. Для mirror она служит подложкой: закрывает тонкие швы между зеркальными копиями.
+  const LIM = 30000 / q.ds;
+  const L = Math.min(LIM, Math.max(0, -q.xmin) + 2);
+  const R = Math.min(LIM, Math.max(0, q.xmax - w) + 2);
+  const T = Math.min(LIM, Math.max(0, -q.ymin) + 2);
+  const B = Math.min(LIM, Math.max(0, q.ymax - h) + 2);
+  // полосы перекрываются с фото на 1px, фото рисуется сверху — швов нет
+  ctx.drawImage(img, 0, 0, 1, h, -L, 0, L + 1, h);
+  ctx.drawImage(img, w - 1, 0, 1, h, w - 1, 0, R + 1, h);
+  ctx.drawImage(img, 0, 0, w, 1, 0, -T, w, T + 1);
+  ctx.drawImage(img, 0, h - 1, w, 1, 0, h - 1, w, B + 1);
+  ctx.drawImage(img, 0, 0, 1, 1, -L, -T, L + 1, T + 1);
+  ctx.drawImage(img, w - 1, 0, 1, 1, w - 1, -T, R + 1, T + 1);
+  ctx.drawImage(img, 0, h - 1, 1, 1, -L, h - 1, L + 1, B + 1);
+  ctx.drawImage(img, w - 1, h - 1, 1, 1, w - 1, h - 1, R + 1, B + 1);
 
-  const out = document.createElement('canvas');
-  out.width = out.height = sizePx;
-  const octx = out.getContext('2d');
-  octx.imageSmoothingEnabled = true;
-  octx.imageSmoothingQuality = 'high';
-  octx.drawImage(off, 0, 0, sizePx, sizePx);
-  return out;
-}
-
-function buildMirrorWhole(sizePx, img) {
-  const off = document.createElement('canvas');
-  off.width = off.height = sizePx;
-  const octx = off.getContext('2d');
-  const { dx, dy, dw, dh } = containRect(img.width, img.height, sizePx, sizePx);
-  octx.drawImage(img, dx, dy, dw, dh);
-  if (dy > 0) {
-    octx.save(); octx.translate(dx, dy); octx.scale(1, -1);
-    octx.drawImage(img, 0, 0, img.width, img.height, 0, -dy, dw, dy); octx.restore();
-  }
-  if (dy + dh < sizePx) {
-    const bs = sizePx - (dy + dh);
-    octx.save(); octx.translate(dx, dy + dh); octx.scale(1, -1);
-    octx.drawImage(img, 0, 0, img.width, img.height, 0, -bs, dw, bs); octx.restore();
-  }
-  if (dx > 0) {
-    octx.save(); octx.translate(dx, dy); octx.scale(-1, 1);
-    octx.drawImage(img, 0, 0, img.width, img.height, -dx, 0, dx, dh); octx.restore();
-  }
-  if (dx + dw < sizePx) {
-    const rs = sizePx - (dx + dw);
-    octx.save(); octx.translate(dx + dw, dy); octx.scale(-1, 1);
-    octx.drawImage(img, 0, 0, img.width, img.height, 0, 0, rs, dh); octx.restore();
-  }
-  return off;
-}
-
-function buildMirrorRegion(sizePx, img) {
-  const SMALL = Math.min(160, sizePx);
-  const off = document.createElement('canvas');
-  off.width = off.height = SMALL;
-  const octx = off.getContext('2d');
-
-  const k = SMALL / sizePx;
-  const side = sideImgForImg(img);
-  let drawScale = sizePx / side * k;
-  if (drawScale > MAX_DRAW_SCALE * k) drawScale = MAX_DRAW_SCALE * k;
-  if (drawScale < 0.01 * k) drawScale = 0.01 * k;
-  const rot = parseFloat(rotSlider.value) * Math.PI / 180;
-  octx.save();
-  octx.imageSmoothingEnabled = true;
-  octx.imageSmoothingQuality = 'high';
-  octx.translate(SMALL / 2, SMALL / 2);
-  octx.rotate(rot);
-  octx.scale(drawScale, drawScale);
-  octx.translate(-viewCenter.x, -viewCenter.y);
-  octx.drawImage(img, 0, 0);
-  octx.restore();
-
-  const imgData = octx.getImageData(0, 0, SMALL, SMALL);
-  const d = imgData.data;
-  let minX = SMALL, minY = SMALL, maxX = -1, maxY = -1;
-  for (let y = 0; y < SMALL; y++) {
-    for (let x = 0; x < SMALL; x++) {
-      if (d[(y * SMALL + x) * 4 + 3] > 0) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
+  if (mode === 'mirror') {
+    const CAP = 24;
+    let i0 = Math.floor(q.xmin / w), i1 = Math.floor(q.xmax / w);
+    let j0 = Math.floor(q.ymin / h), j1 = Math.floor(q.ymax / h);
+    if (i1 - i0 > CAP) { const m = Math.floor(viewCenter.x / w); i0 = m - CAP / 2; i1 = m + CAP / 2; }
+    if (j1 - j0 > CAP) { const m = Math.floor(viewCenter.y / h); j0 = m - CAP / 2; j1 = m + CAP / 2; }
+    for (let i = i0; i <= i1; i++) {
+      const fx = (((i % 2) + 2) % 2) === 1;
+      for (let j = j0; j <= j1; j++) {
+        const fy = (((j % 2) + 2) % 2) === 1;
+        if (i === 0 && j === 0) continue; // оригинал рисуется сверху
+        ctx.save();
+        ctx.translate(fx ? (i + 1) * w : i * w, fy ? (j + 1) * h : j * h);
+        ctx.scale(fx ? -1 : 1, fy ? -1 : 1);
+        ctx.drawImage(img, 0, 0);
+        ctx.restore();
       }
     }
   }
-  if (maxX < 0) return off;
-
-  const tmp = document.createElement('canvas');
-  tmp.width = tmp.height = SMALL;
-  tmp.getContext('2d').drawImage(off, 0, 0);
-
-  const drawReflect = (sx, sy, sw, sh, dx, dy, dw, dh, flipX, flipY) => {
-    octx.save();
-    octx.translate(dx + (flipX ? dw : 0), dy + (flipY ? dh : 0));
-    octx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
-    octx.drawImage(tmp, sx, sy, sw, sh, 0, 0, dw, dh);
-    octx.restore();
-  };
-
-  const bboxW = maxX - minX + 1;
-  const bboxH = maxY - minY + 1;
-
-  if (minY > 0) {
-    drawReflect(minX, minY, bboxW, Math.min(minY, bboxH), 0, 0, SMALL, minY, false, true);
-  }
-  if (maxY < SMALL - 1) {
-    const sh = Math.min(SMALL - 1 - maxY, bboxH);
-    drawReflect(minX, maxY + 1 - sh, bboxW, sh, 0, maxY + 1, SMALL, SMALL - 1 - maxY, false, true);
-  }
-  if (minX > 0) {
-    drawReflect(minX, minY, Math.min(minX, bboxW), bboxH, 0, 0, minX, SMALL, true, false);
-  }
-  if (maxX < SMALL - 1) {
-    const sw = Math.min(SMALL - 1 - maxX, bboxW);
-    drawReflect(maxX + 1 - sw, minY, sw, bboxH, maxX + 1, 0, SMALL - 1 - maxX, SMALL, true, false);
-  }
-
-  const out = document.createElement('canvas');
-  out.width = out.height = sizePx;
-  const octx2 = out.getContext('2d');
-  octx2.imageSmoothingEnabled = true;
-  octx2.imageSmoothingQuality = 'high';
-  octx2.drawImage(off, 0, 0, sizePx, sizePx);
-  return out;
+  ctx.restore();
 }
 
-function drawEdgeBackgroundWithImg(ctx, w, h, img) {
-  const mode = bgModeSelect.value;
-  if (mode === 'checker') return;
-  if (mode === 'color') {
-    ctx.fillStyle = bgColorPicker.value;
-    ctx.fillRect(0, 0, w, h);
-    return;
+// Размытая копия: cover-обрезка по центру, blur через ctx.filter, а где его нет (Safari) — даунскейл/апскейл.
+const blurSmallCache = new WeakMap();
+function getBlurSmall(img) {
+  let c = blurSmallCache.get(img);
+  if (c) return c;
+  const N = 96, m = 14;
+  c = document.createElement('canvas');
+  c.width = c.height = N;
+  const cx = c.getContext('2d');
+  const side = Math.min(img.width, img.height);
+  const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+  cx.imageSmoothingEnabled = true;
+  cx.imageSmoothingQuality = 'high';
+  if (typeof cx.filter !== 'undefined') {
+    cx.filter = 'blur(5px)';
+    cx.drawImage(img, sx, sy, side, side, -m, -m, N + 2 * m, N + 2 * m);
+    cx.filter = 'none';
+  } else {
+    const t = document.createElement('canvas');
+    t.width = t.height = 16;
+    const tx = t.getContext('2d');
+    tx.imageSmoothingEnabled = true;
+    tx.imageSmoothingQuality = 'high';
+    tx.drawImage(img, sx, sy, side, side, 0, 0, 16, 16);
+    cx.drawImage(t, 0, 0, N, N);
   }
-  if (!img) return;
-
-  if (mode === 'blur') {
-    const { dx, dy, dw, dh } = containRect(img.width, img.height, w, h);
-    const blurPx = Math.max(4, Math.min(w, h) * 0.08);
-    ctx.save();
-    ctx.filter = `blur(${blurPx}px)`;
-    ctx.drawImage(img, dx, dy, dw, dh);
-    ctx.filter = 'none';
-    ctx.restore();
-    return;
-  }
-
-  const imgKey = (img === sourceImg) ? 'orig' : 'work';
-  const key = mode + '|' + imgKey + '|' + w + 'x' + h + '|'
-    + viewCenter.x.toFixed(2) + ',' + viewCenter.y.toFixed(2) + '|'
-    + scaleSlider.value + '|' + rotSlider.value;
-  if (edgeCache.key === key && edgeCache.canvas) {
-    ctx.drawImage(edgeCache.canvas, 0, 0, w, h);
-    return;
-  }
-
-  let built = null;
-  if (mode === 'edge') built = buildEdgeWhole(w, img);
-  else if (mode === 'edge-region') built = buildEdgeRegion(w, img);
-  else if (mode === 'mirror') built = buildMirrorWhole(w, img);
-  else if (mode === 'mirror-region') built = buildMirrorRegion(w, img);
-
-  if (built) {
-    edgeCache.key = key;
-    edgeCache.canvas = built;
-    ctx.drawImage(built, 0, 0, w, h);
-  }
+  blurSmallCache.set(img, c);
+  return c;
 }
 
 function drawCheckerBackdrop(ctx, w, h) {
@@ -1067,7 +976,23 @@ function drawCheckerBackdrop(ctx, w, h) {
 
 function drawSourceInto(ctx, sizePx, img) {
   if (!img) return;
-  drawEdgeBackgroundWithImg(ctx, sizePx, sizePx, img);
+  const mode = bgModeSelect.value;
+  if (mode === 'color') {
+    ctx.fillStyle = bgColorPicker.value;
+    ctx.fillRect(0, 0, sizePx, sizePx);
+  } else if (mode === 'blur') {
+    if (!regionInsideImage(sizePx, img)) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(getBlurSmall(img), 0, 0, sizePx, sizePx);
+      ctx.restore();
+    }
+  } else if (mode === 'edge' || mode === 'edge-region') {
+    drawBorderFill(ctx, sizePx, img, 'edge');
+  } else if (mode === 'mirror' || mode === 'mirror-region') {
+    drawBorderFill(ctx, sizePx, img, 'mirror');
+  }
   drawImageTransformed(ctx, sizePx, img);
 }
 
@@ -1075,93 +1000,99 @@ function buildTileCanvas(sizePx, img) {
   const imgType = (img === sourceImg) ? 'orig' : 'work';
   const imgW = img ? img.width : 0;
   const key = sizePx + '|' + imgType + '|' + imgW + '|' + viewCenter.x + '|' + viewCenter.y + '|' + rotSlider.value + '|' + scaleSlider.value + '|' + bgModeSelect.value + '|' + bgColorPicker.value;
-  if (tileCache.key === key && tileCache.canvas) return tileCache.canvas;
+  const cachedTile = tileCache.get(key);
+  if (cachedTile) return cachedTile;
   const c = document.createElement('canvas');
   c.width = c.height = sizePx;
   drawSourceInto(c.getContext('2d'), sizePx, img);
-  tileCache.key = key;
-  tileCache.canvas = c;
+  tileCache.set(key, c);
   return c;
 }
 
 function currentMode() { return currentModeVal; }
 
-// Фигура = ровно та область, которая берётся в тайл.
-// Центрируется и вписывается в квадрат Source. Затемняется всё ВОКРУГ фигуры.
+// Оверлей показывает РЕАЛЬНО используемую область тайла.
+// Считаем её самим билдером: в него подаётся тайл-маркер (R=x, G=y),
+// по цветам результата видно, какие пиксели тайла попали в паттерн.
+const overlayCache = {};
+const OV_N = 128;
+
+function morphMask(m, N, dilate) {
+  const o = new Uint8Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    let hit = dilate ? 0 : 1;
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const xx = x + i, yy = y + j;
+      const v = (xx < 0 || yy < 0 || xx >= N || yy >= N) ? (dilate ? 0 : 1) : m[yy * N + xx];
+      if (dilate) { if (v) hit = 1; } else if (!v) hit = 0;
+    }
+    o[y * N + x] = hit;
+  }
+  return o;
+}
+
+function computeRegionMask(mode) {
+  const N = OV_N;
+  const full = new Uint8Array(N * N).fill(1);
+  if (['mirror', 'grid', 'truchet', 'moire', 'voronoi'].includes(mode)) return full;
+  const mk = document.createElement('canvas');
+  mk.width = mk.height = N;
+  const mctx = mk.getContext('2d');
+  const img = mctx.createImageData(N, N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = (y * N + x) * 4;
+    img.data[i] = x * 2; img.data[i + 1] = y * 2; img.data[i + 2] = 0; img.data[i + 3] = 255;
+  }
+  mctx.putImageData(img, 0, 0);
+  let W = N, H = N, c = { x: N / 2, y: N / 2 };
+  if (isHexMode(mode)) {
+    W = Math.ceil(N * Math.sqrt(3) * 1.1); H = Math.ceil(N * 2.05);
+    c = { x: W / 2, y: H / 2 };
+  }
+  const el = buildPatternElement(mode, mk, W, H, c, N);
+  const od = el.getContext('2d').getImageData(0, 0, W, H).data;
+  let m = new Uint8Array(N * N);
+  let any = false;
+  for (let i = 0; i < W * H; i++) {
+    if (od[i * 4 + 3] < 128) continue;
+    const mx = Math.min(N - 1, Math.round(od[i * 4] / 2));
+    const my = Math.min(N - 1, Math.round(od[i * 4 + 1] / 2));
+    m[my * N + mx] = 1; any = true;
+  }
+  if (!any) return full;
+  // закрытие 5x5: заполняем дырки от прореженной выборки
+  for (let r = 0; r < 2; r++) m = morphMask(m, N, true);
+  for (let r = 0; r < 2; r++) m = morphMask(m, N, false);
+  return m;
+}
+
+function getOverlayCanvas(mode) {
+  if (overlayCache[mode]) return overlayCache[mode];
+  const N = OV_N;
+  const m = computeRegionMask(mode);
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = N;
+  const cx = cv.getContext('2d');
+  const img = cx.createImageData(N, N);
+  const d = img.data;
+  const at = (x, y) => (x < 0 || y < 0 || x >= N || y >= N) ? 1 : m[y * N + x];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = (y * N + x) * 4;
+    if (!m[y * N + x]) { d[i + 3] = 166; continue; }
+    if (!at(x - 1, y) || !at(x + 1, y) || !at(x, y - 1) || !at(x, y + 1)) {
+      d[i] = 0x4d; d[i + 1] = 0xa6; d[i + 2] = 0xff; d[i + 3] = 255;
+    }
+  }
+  cx.putImageData(img, 0, 0);
+  overlayCache[mode] = cv;
+  return cv;
+}
+
 function drawPatternShapeOverlay(ctx, ox, oy, win, mode) {
-  const L = ox, T = oy, R = ox + win, B = oy + win;
-  const pad = win * 0.08;
-  const innerW = win - pad * 2;
-  const innerH = win - pad * 2;
-  const cx0 = ox + win / 2, cy0 = oy + win / 2;
-
-  const pts = [];
-  const sector = (a1, a2) => {
-    pts.push([0, 0]);
-    pts.push([Math.cos(a1 * Math.PI / 180), Math.sin(a1 * Math.PI / 180)]);
-    pts.push([Math.cos(a2 * Math.PI / 180), Math.sin(a2 * Math.PI / 180)]);
-  };
-
-  if (mode === 'hexagon' || mode === 'triangle6' || mode === 'hat') {
-    sector(-90, -30);
-  } else if (mode === 'hexagon12' || mode === 'triangle12') {
-    sector(-90, -60);
-  } else if (mode === 'square8' || mode === 'kaleido') {
-    pts.push([0, 0], [1, 0], [1, -1]);
-  } else if (mode === 'square4') {
-    pts.push([0, 0], [1, 0], [1, 1], [0, 1]);
-  } else if (mode === 'mirror' || mode === 'pmm' || mode === 'truchet') {
-    pts.push([-1, -1], [0, -1], [0, 0], [-1, 0]);
-  } else if (mode === 'rot180') {
-    pts.push([-1, -1], [1, -1], [1, 0], [-1, 0]);
-  } else if (mode === 'glide') {
-    pts.push([-1, -1], [1, -1], [1, -0.5], [-1, -0.5]);
-  } else if (mode === 'penrose' || mode === 'pinwheel') {
-    sector(-90, -54);
-  } else {
-    pts.push([-1, -1], [1, -1], [1, 1], [-1, 1]);
-  }
-
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const [x, y] of pts) {
-    if (x < minX) minX = x;
-    if (x > maxX) maxX = x;
-    if (y < minY) minY = y;
-    if (y > maxY) maxY = y;
-  }
-  const fw = maxX - minX;
-  const fh = maxY - minY;
-  const fcx = (minX + maxX) / 2;
-  const fcy = (minY + maxY) / 2;
-  const sc = Math.min(innerW / fw, innerH / fh);
-
-  const toScreen = (x, y) => [
-    cx0 + (x - fcx) * sc,
-    cy0 + (y - fcy) * sc
-  ];
-
-  const p = new Path2D();
-  for (let i = 0; i < pts.length; i++) {
-    const [sx, sy] = toScreen(pts[i][0], pts[i][1]);
-    if (i === 0) p.moveTo(sx, sy);
-    else p.lineTo(sx, sy);
-  }
-  p.closePath();
-
-  // 1) Затемняем всё, кроме фигуры.
+  const ov = getOverlayCanvas(mode);
   ctx.save();
-  const outer = new Path2D();
-  outer.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  outer.addPath(p);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-  ctx.fill(outer, 'evenodd');
-  ctx.restore();
-
-  // 2) Обводим фигуру.
-  ctx.save();
-  ctx.strokeStyle = '#4da6ff';
-  ctx.lineWidth = 2;
-  ctx.stroke(p);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(ov, ox, oy, win, win);
   ctx.restore();
 }
 
@@ -1205,7 +1136,7 @@ function drawSelector() {
 }
 
 function calcPeriod(mode, s) {
-  if (mode === 'hexagon' || mode === 'hexagon12') return { px: s * Math.sqrt(3), py: 3 * s };
+  if (isHexMode(mode)) return { px: s * Math.sqrt(3), py: 3 * s };
   if (mode === 'mirror') return { px: 2 * s, py: 2 * s };
   return { px: s, py: s };
 }
@@ -1222,7 +1153,7 @@ function getTileCountInPreview() {
 function calcExportParams(target) {
   const mode = currentMode();
   const { nX, nY } = getTileCountInPreview();
-  const isHex = (mode === 'hexagon' || mode === 'hexagon12');
+  const isHex = (isHexMode(mode));
   const factor = (mode === 'mirror') ? 2 : 1;
   if (isHex) {
     const sFromX = target / (Math.sqrt(3) * nX);
@@ -1250,11 +1181,9 @@ function updateBgHint() {
   const hints = {
     'checker': 'Transparent checkerboard — outside is transparent in PNG.',
     'color': 'Fill the outside area with a solid color.',
-    'blur': 'Blurred stretched copy of the image.',
-    'edge': 'Stretch outermost pixels of the whole image (contain).',
-    'edge-region': 'Stretch outermost pixels of what is visible in the region.',
-    'mirror': 'Reflect the whole image (contain) outwards.',
-    'mirror-region': 'Reflect edges of what is visible in the region.',
+    'blur': 'Soft blurred copy of the image fills everything outside it.',
+    'edge': 'Outermost pixels of the photo are stretched outward (follows scale & rotation).',
+    'mirror': 'The photo is reflected outward at its borders (follows scale & rotation).',
   };
   bgHint.textContent = hints[mode] || '';
 }
@@ -1331,76 +1260,75 @@ function sampleBilinearInto(data, w, h, x, y, out, oi) {
 
 // ============ БИЛДЕРЫ ПАТТЕРНОВ ============
 
-function buildHexagon(tile, W, H, center, s) {
+// Общий билдер «складок»: сектор -> поворот -> (опц.) отражение -> аффинная выборка тайла.
+function buildFold(tile, W, H, center, s, baseAngle, SECTOR, STEP, nSec, b0, b1, isoEm) {
   const tw = tile.width, th = tile.height;
   const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
-  const v0 = vertex(center, 0, s), v1 = vertex(center, 1, s);
-  const ax = (v0.x - center.x) / s, ay = (v0.y - center.y) / s;
-  const bx = (v1.x - center.x) / s, by = (v1.y - center.y) / s;
+  const ax = (b0.x - center.x) / s, ay = (b0.y - center.y) / s;
+  const bx = (b1.x - center.x) / s, by = (b1.y - center.y) / s;
   const det = ax * by - bx * ay;
+  let ux = b1.x - center.x, uy = b1.y - center.y;
+  const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
+  // isoEm: сектор берётся из тайла БЕЗ перекоса (u,v — обычные ортогональные координаты)
+  let e1x = 0, e1y = 0, e2x = 0, e2y = 0, nx = 0, ny = 0, apo = 0;
+  if (isoEm) {
+    const l1 = Math.hypot(ax, ay) || 1; e1x = ax / l1; e1y = ay / l1;
+    const dot = bx * e1x + by * e1y;
+    const qx = bx - dot * e1x, qy = by - dot * e1y;
+    const l2 = Math.hypot(qx, qy) || 1; e2x = qx / l2; e2y = qy / l2;
+    nx = isoEm.x - center.x; ny = isoEm.y - center.y;
+    apo = Math.hypot(nx, ny) || 1; nx /= apo; ny /= apo;
+  }
+  const nRot = Math.ceil(nSec / 2);
+  const cosR = new Float64Array(nRot), sinR = new Float64Array(nRot);
+  for (let j = 0; j < nRot; j++) { cosR[j] = Math.cos(-j * STEP); sinR[j] = Math.sin(-j * STEP); }
   const out = document.createElement('canvas');
   out.width = W; out.height = H;
   const octx = out.getContext('2d');
   const outImg = octx.createImageData(W, H);
   const outData = outImg.data;
-  const baseAngle = -90 * Math.PI / 180;
+  const TWO_PI = 2 * Math.PI;
   for (let y = 0; y < H; y++) {
+    const dy = y - center.y;
     for (let x = 0; x < W; x++) {
-      const dx = x - center.x, dy = y - center.y;
-      const outIdx = (y * W + x) * 4;
+      const dx = x - center.x;
       let angle = Math.atan2(dy, dx) - baseAngle;
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      let k = Math.floor(angle / (Math.PI / 3));
-      if (k > 5) k = 5; if (k < 0) k = 0;
-      let p = { x, y };
-      p = rotatePoint(p, center, -Math.floor(k / 2) * (2 * Math.PI / 3));
-      if (k % 2 === 1) p = reflectPoint(p, center, v1);
-      const px = p.x - center.x, py = p.y - center.y;
-      const tileX = (px * by - py * bx) / det;
-      const tileY = (py * ax - px * ay) / det;
-      if (tileX < -0.6 || tileY < -0.6 || tileX + tileY > s + 0.6) continue;
-      sampleBilinearInto(tileData, tw, th, tileX, tileY, outData, outIdx);
+      angle = ((angle % TWO_PI) + TWO_PI) % TWO_PI;
+      let k = Math.floor(angle / SECTOR);
+      if (k > nSec - 1) k = nSec - 1; if (k < 0) k = 0;
+      const j = k >> 1;
+      let rx = dx * cosR[j] - dy * sinR[j];
+      let ry = dx * sinR[j] + dy * cosR[j];
+      if (k & 1) {
+        const proj = rx * ux + ry * uy;
+        rx = 2 * proj * ux - rx;
+        ry = 2 * proj * uy - ry;
+      }
+      let tileX, tileY;
+      if (isoEm) {
+        tileX = rx * e1x + ry * e1y;
+        tileY = rx * e2x + ry * e2y;
+        if (tileX < -0.6 || tileY < -0.6 || rx * nx + ry * ny > apo + 0.6) continue;
+      } else {
+        tileX = (rx * by - ry * bx) / det;
+        tileY = (ry * ax - rx * ay) / det;
+        if (tileX < -0.6 || tileY < -0.6 || tileX + tileY > s + 0.6) continue;
+      }
+      sampleBilinearInto(tileData, tw, th, tileX, tileY, outData, (y * W + x) * 4);
     }
   }
   octx.putImageData(outImg, 0, 0);
   return out;
 }
 
+function buildHexagon(tile, W, H, center, s) {
+  const v0 = vertex(center, 0, s), v1 = vertex(center, 1, s);
+  return buildFold(tile, W, H, center, s, -Math.PI / 2, Math.PI / 3, 2 * Math.PI / 3, 6, v0, v1);
+}
+
 function buildHexagon12(tile, W, H, center, s) {
-  const tw = tile.width, th = tile.height;
-  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
-  const b0 = vertex(center, 0, s);
-  const b1 = edgeMid(center, 0, s);
-  const ax = (b0.x - center.x) / s, ay = (b0.y - center.y) / s;
-  const bx = (b1.x - center.x) / s, by = (b1.y - center.y) / s;
-  const det = ax * by - bx * ay;
-  const out = document.createElement('canvas');
-  out.width = W; out.height = H;
-  const octx = out.getContext('2d');
-  const outImg = octx.createImageData(W, H);
-  const outData = outImg.data;
-  const baseAngle = -90 * Math.PI / 180;
-  const SECTOR = Math.PI / 6, STEP = Math.PI / 3;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const dx = x - center.x, dy = y - center.y;
-      const outIdx = (y * W + x) * 4;
-      let angle = Math.atan2(dy, dx) - baseAngle;
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      let k = Math.floor(angle / SECTOR);
-      if (k > 11) k = 11; if (k < 0) k = 0;
-      let p = { x, y };
-      p = rotatePoint(p, center, -Math.floor(k / 2) * STEP);
-      if (k % 2 === 1) p = reflectPoint(p, center, b1);
-      const px = p.x - center.x, py = p.y - center.y;
-      const tileX = (px * by - py * bx) / det;
-      const tileY = (py * ax - px * ay) / det;
-      if (tileX < -0.6 || tileY < -0.6 || tileX + tileY > s + 0.6) continue;
-      sampleBilinearInto(tileData, tw, th, tileX, tileY, outData, outIdx);
-    }
-  }
-  octx.putImageData(outImg, 0, 0);
-  return out;
+  const b0 = vertex(center, 0, s), b1 = edgeMid(center, 0, s);
+  return buildFold(tile, W, H, center, s, -Math.PI / 2, Math.PI / 6, Math.PI / 3, 12, b0, b1);
 }
 
 function squareBoundaryPoint(center, i, s) {
@@ -1410,39 +1338,9 @@ function squareBoundaryPoint(center, i, s) {
 }
 
 function buildSquare8(tile, W, H, center, s) {
-  const tw = tile.width, th = tile.height;
-  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
   const b0 = squareBoundaryPoint(center, 0, s);
   const b1 = squareBoundaryPoint(center, 1, s);
-  const ax = (b0.x - center.x) / s, ay = (b0.y - center.y) / s;
-  const bx = (b1.x - center.x) / s, by = (b1.y - center.y) / s;
-  const det = ax * by - bx * ay;
-  const out = document.createElement('canvas');
-  out.width = W; out.height = H;
-  const octx = out.getContext('2d');
-  const outImg = octx.createImageData(W, H);
-  const outData = outImg.data;
-  const SECTOR = Math.PI / 4, STEP = Math.PI / 2;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const dx = x - center.x, dy = y - center.y;
-      const outIdx = (y * W + x) * 4;
-      let angle = Math.atan2(dy, dx);
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      let k = Math.floor(angle / SECTOR);
-      if (k > 7) k = 7; if (k < 0) k = 0;
-      let p = { x, y };
-      p = rotatePoint(p, center, -Math.floor(k / 2) * STEP);
-      if (k % 2 === 1) p = reflectPoint(p, center, b1);
-      const px = p.x - center.x, py = p.y - center.y;
-      const tileX = (px * by - py * bx) / det;
-      const tileY = (py * ax - px * ay) / det;
-      if (tileX < -0.6 || tileY < -0.6 || tileX + tileY > s + 0.6) continue;
-      sampleBilinearInto(tileData, tw, th, tileX, tileY, outData, outIdx);
-    }
-  }
-  octx.putImageData(outImg, 0, 0);
-  return out;
+  return buildFold(tile, W, H, center, s, 0, Math.PI / 4, Math.PI / 2, 8, b0, b1);
 }
 
 function buildSquare4(tile, W, H, center, s) {
@@ -1453,23 +1351,13 @@ function buildSquare4(tile, W, H, center, s) {
   const octx = out.getContext('2d');
   const outImg = octx.createImageData(W, H);
   const outData = outImg.data;
-  const SECTOR = Math.PI / 2;
   const half = s / 2;
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
-      const dx = x - center.x, dy = y - center.y;
-      const outIdx = (y * W + x) * 4;
-      let angle = Math.atan2(dy, dx);
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      let k = Math.floor(angle / SECTOR);
-      if (k > 3) k = 3; if (k < 0) k = 0;
-      let p = { x, y };
-      p = rotatePoint(p, center, -k * SECTOR);
-      const px = p.x - center.x, py = p.y - center.y;
-      if (px < 0 || py < 0 || px > half || py > half) continue;
-      const tx = (px / half) * tw;
-      const ty = (py / half) * th;
-      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+      let ax = Math.abs(x - center.x), ay = Math.abs(y - center.y);
+      if (ay > ax) { const q = ax; ax = ay; ay = q; }
+      if (ax > half + 0.5) continue;
+      sampleBilinearInto(tileData, tw, th, (ax / half) * tw, (ay / half) * th, outData, (y * W + x) * 4);
     }
   }
   octx.putImageData(outImg, 0, 0);
@@ -1477,71 +1365,13 @@ function buildSquare4(tile, W, H, center, s) {
 }
 
 function buildTriangle6(tile, W, H, center, s) {
-  const tw = tile.width, th = tile.height;
-  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
-  const out = document.createElement('canvas');
-  out.width = W; out.height = H;
-  const octx = out.getContext('2d');
-  const outImg = octx.createImageData(W, H);
-  const outData = outImg.data;
-  const SECTOR = Math.PI / 3;
-  const half = s / 2;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const dx = x - center.x, dy = y - center.y;
-      const outIdx = (y * W + x) * 4;
-      let angle = Math.atan2(dy, dx);
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      let k = Math.floor(angle / SECTOR);
-      if (k > 5) k = 5; if (k < 0) k = 0;
-      let p = { x, y };
-      p = rotatePoint(p, center, -Math.floor(k / 2) * (2 * Math.PI / 3));
-      if (k % 2 === 1) p = { x: p.x, y: center.y - (p.y - center.y) };
-      const px = p.x - center.x, py = p.y - center.y;
-      const tileX = px + half;
-      const tileY = py + half;
-      if (tileX < 0 || tileY < 0 || tileX > s || tileY > s) continue;
-      const tx = (tileX / s) * tw;
-      const ty = (tileY / s) * th;
-      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
-    }
-  }
-  octx.putImageData(outImg, 0, 0);
-  return out;
+  const v0 = vertex(center, 0, s), v1 = vertex(center, 1, s), em = edgeMid(center, 0, s);
+  return buildFold(tile, W, H, center, s, -Math.PI / 2, Math.PI / 3, 2 * Math.PI / 3, 6, v0, v1, em);
 }
 
 function buildTriangle12(tile, W, H, center, s) {
-  const tw = tile.width, th = tile.height;
-  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
-  const out = document.createElement('canvas');
-  out.width = W; out.height = H;
-  const octx = out.getContext('2d');
-  const outImg = octx.createImageData(W, H);
-  const outData = outImg.data;
-  const SECTOR = Math.PI / 6;
-  const half = s / 2;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const dx = x - center.x, dy = y - center.y;
-      const outIdx = (y * W + x) * 4;
-      let angle = Math.atan2(dy, dx);
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      let k = Math.floor(angle / SECTOR);
-      if (k > 11) k = 11; if (k < 0) k = 0;
-      let p = { x, y };
-      p = rotatePoint(p, center, -Math.floor(k / 2) * (Math.PI / 3));
-      if (k % 2 === 1) p = { x: p.x, y: center.y - (p.y - center.y) };
-      const px = p.x - center.x, py = p.y - center.y;
-      const tileX = px + half;
-      const tileY = py + half;
-      if (tileX < 0 || tileY < 0 || tileX > s || tileY > s) continue;
-      const tx = (tileX / s) * tw;
-      const ty = (tileY / s) * th;
-      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
-    }
-  }
-  octx.putImageData(outImg, 0, 0);
-  return out;
+  const b0 = vertex(center, 0, s), b1 = edgeMid(center, 0, s);
+  return buildFold(tile, W, H, center, s, -Math.PI / 2, Math.PI / 6, Math.PI / 3, 12, b0, b1, b1);
 }
 
 function buildKaleido(tile, W, H, center, s) {
@@ -1588,19 +1418,14 @@ function buildRot180(tile, W, H, center, s) {
   const octx = out.getContext('2d');
   const outImg = octx.createImageData(W, H);
   const outData = outImg.data;
-  const half = s / 2;
+  const L = s / (2 * Math.SQRT2);   // полупериод: сдвиг на s по x или y = ровно один период
+  const L2 = 2 * L;
+  const tri = (v) => { const p = ((v % L2) + L2) % L2; return p <= L ? p : L2 - p; };
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const dx = x - center.x, dy = y - center.y;
-      const outIdx = (y * W + x) * 4;
-      let px = dx, py = dy;
-      if (px < 0 || py < 0) { px = -px; py = -py; }
-      const tileX = px + half;
-      const tileY = py + half;
-      if (tileX < 0 || tileY < 0 || tileX > s || tileY > s) continue;
-      const tx = (tileX / s) * tw;
-      const ty = (tileY / s) * th;
-      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+      const u = (dx + dy) * Math.SQRT1_2, v = (dx - dy) * Math.SQRT1_2;
+      sampleBilinearInto(tileData, tw, th, (tri(u) / L) * tw, (tri(v) / L) * th, outData, (y * W + x) * 4);
     }
   }
   octx.putImageData(outImg, 0, 0);
@@ -1615,13 +1440,13 @@ function buildGlide(tile, W, H, center, s) {
   const octx = out.getContext('2d');
   const outImg = octx.createImageData(W, H);
   const outData = outImg.data;
-  const rowPixels = Math.max(1, Math.round(s / 4));
+  const rowPixels = s / 4; // дробное, чтобы 4 ряда ровно укладывались в период s
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const outIdx = (y * W + x) * 4;
       const row = Math.floor((y - center.y) / rowPixels);
       let px = x - center.x, py = y - center.y;
-      if (row % 2 === 1) px = -px;
+      if (((row % 2) + 2) % 2 === 1) px = -px; // JS: (-1 % 2) === -1
       const tileX = ((px + s * 1000) % s + s) % s;
       const tileY = ((py + s * 1000) % s + s) % s;
       const tx = (tileX / s) * tw;
@@ -1660,7 +1485,7 @@ function buildPMM(tile, W, H, center, s) {
   return out;
 }
 
-function buildPenrose(tile, W, H, center, s) {
+function buildMirrorSectors(tile, W, H, center, s, SECTOR, baseAngle, twist) {
   const tw = tile.width, th = tile.height;
   const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
   const out = document.createElement('canvas');
@@ -1668,192 +1493,141 @@ function buildPenrose(tile, W, H, center, s) {
   const octx = out.getContext('2d');
   const outImg = octx.createImageData(W, H);
   const outData = outImg.data;
-  const SECTOR = Math.PI / 5;
-  const half = s / 2;
+  const half = s / 2, TWO_PI = 2 * Math.PI;
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const dx = x - center.x, dy = y - center.y;
-      const outIdx = (y * W + x) * 4;
-      let angle = Math.atan2(dy, dx);
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      let k = Math.floor(angle / SECTOR);
-      if (k > 9) k = 9; if (k < 0) k = 0;
-      let p = { x, y };
-      p = rotatePoint(p, center, -k * SECTOR);
-      let px = p.x - center.x, py = p.y - center.y;
-      if (py < 0) py = -py;
-      const tileX = Math.min(px, half);
-      const tileY = Math.min(py, half);
-      const tx = Math.min(tw - 1, (tileX / half) * tw);
-      const ty = Math.min(th - 1, (tileY / half) * th);
-      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
+      let a = Math.atan2(dy, dx) - baseAngle;
+      a = ((a % TWO_PI) + TWO_PI) % TWO_PI;
+      const k = Math.floor(a / SECTOR);
+      let f = a - k * SECTOR;
+      if (k & 1) f = SECTOR - f;
+      const r = Math.hypot(dx, dy);
+      if (twist) f += twist * r / half; // плавная закрутка: швов между секторами нет, т.к. зависит только от f и r
+      const tx = Math.min(tw - 1, (Math.abs(r * Math.cos(f)) / half) * tw);
+      const ty = Math.min(th - 1, (Math.abs(r * Math.sin(f)) / half) * th);
+      sampleBilinearInto(tileData, tw, th, tx, ty, outData, (y * W + x) * 4);
     }
   }
   octx.putImageData(outImg, 0, 0);
   return out;
 }
 
-function buildHat(tile, W, H, center, s) {
-  const tw = tile.width, th = tile.height;
-  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
-  const out = document.createElement('canvas');
-  out.width = W; out.height = H;
-  const octx = out.getContext('2d');
-  const outImg = octx.createImageData(W, H);
-  const outData = outImg.data;
-  const SECTOR = Math.PI / 3;
-  const half = s / 2;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const dx = x - center.x, dy = y - center.y;
-      const outIdx = (y * W + x) * 4;
-      let angle = Math.atan2(dy, dx) - Math.PI / 6;
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      let k = Math.floor(angle / SECTOR);
-      if (k > 5) k = 5; if (k < 0) k = 0;
-      let p = { x, y };
-      p = rotatePoint(p, center, -k * SECTOR);
-      const rayAngle = k * SECTOR;
-      const cos = Math.cos(-rayAngle), sin = Math.sin(-rayAngle);
-      const vx = p.x - center.x, vy = p.y - center.y;
-      const rx = vx * cos - vy * sin;
-      const ry = vx * sin + vy * cos;
-      const px = rx < 0 ? -rx : rx;
-      const py = ry < 0 ? -ry : ry;
-      const tileX = Math.min(px, half);
-      const tileY = Math.min(py, half);
-      const tx = Math.min(tw - 1, (tileX / half) * tw);
-      const ty = Math.min(th - 1, (tileY / half) * th);
-      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
-    }
-  }
-  octx.putImageData(outImg, 0, 0);
-  return out;
-}
+function buildPenrose(tile, W, H, center, s) { return buildMirrorSectors(tile, W, H, center, s, Math.PI / 5, 0); }
+function buildHat(tile, W, H, center, s) { return buildMirrorSectors(tile, W, H, center, s, Math.PI / 3, Math.PI / 6); }
 
-function buildPinwheel(tile, W, H, center, s) {
-  const tw = tile.width, th = tile.height;
-  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
-  const out = document.createElement('canvas');
-  out.width = W; out.height = H;
-  const octx = out.getContext('2d');
-  const outImg = octx.createImageData(W, H);
-  const outData = outImg.data;
-  const PHI = (1 + Math.sqrt(5)) / 2;
-  const SECTOR = Math.PI * 2 / 10;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const dx = x - center.x, dy = y - center.y;
-      const outIdx = (y * W + x) * 4;
-      let angle = Math.atan2(dy, dx);
-      angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-      let k = Math.floor(angle / SECTOR);
-      if (k > 9) k = 9; if (k < 0) k = 0;
-      const scaleK = Math.pow(1 / PHI, k);
-      let p = { x, y };
-      p = rotatePoint(p, center, -k * SECTOR);
-      const px = (p.x - center.x) / scaleK;
-      const py = (p.y - center.y) / scaleK;
-      const tileX = ((px + s * 1000) % s + s) % s;
-      const tileY = ((py + s * 1000) % s + s) % s;
-      const tx = (tileX / s) * tw;
-      const ty = (tileY / s) * th;
-      sampleBilinearInto(tileData, tw, th, tx, ty, outData, outIdx);
-    }
-  }
-  octx.putImageData(outImg, 0, 0);
-  return out;
-}
+
+
+function buildPinwheel(tile, W, H, center, s) { return buildMirrorSectors(tile, W, H, center, s, Math.PI / 4, 0, 1.4); }
 
 function buildTruchet(tile, W, H, center, s) {
   const tw = tile.width, th = tile.height;
   const out = document.createElement('canvas');
   out.width = W; out.height = H;
   const octx = out.getContext('2d');
-  const seed = (i) => {
-    const x = Math.sin(i * 12.9898) * 43758.5453;
-    return x - Math.floor(x);
-  };
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+  const seed = (i) => { const x = Math.sin(i * 12.9898) * 43758.5453; return x - Math.floor(x); };
   const cell = s / 2;
-  const nCols = Math.ceil(W / cell) + 2;
-  const nRows = Math.ceil(H / cell) + 2;
-  for (let row = -1; row < nRows; row++) {
-    for (let col = -1; col < nCols; col++) {
-      const id = (row * 73856093) ^ (col * 19349663);
-      const r = seed(id);
-      const rot = Math.floor(r * 4) * Math.PI / 2;
+  const nC = Math.max(1, Math.round(W / cell)), nR = Math.max(1, Math.round(H / cell));
+  const cw = W / nC, ch = H / nR, side = Math.max(cw, ch) + 1;
+  for (let row = -1; row <= nR; row++) {
+    for (let col = -1; col <= nC; col++) {
+      const ci = ((col % nC) + nC) % nC, rj = ((row % nR) + nR) % nR; // индексы по кругу -> шов не виден
+      const id = (rj * 73856093) ^ (ci * 19349663);
+      const rot = Math.floor(seed(id) * 4) * Math.PI / 2;
       const flip = seed(id * 7) > 0.5;
-      const dx = col * cell;
-      const dy = row * cell;
       octx.save();
-      octx.translate(dx + cell / 2, dy + cell / 2);
+      octx.translate((col + 0.5) * cw, (row + 0.5) * ch);
       octx.rotate(rot);
       if (flip) octx.scale(-1, 1);
-      octx.drawImage(tile, 0, 0, tw, th, -cell / 2, -cell / 2, cell, cell);
+      octx.drawImage(tile, 0, 0, tw, th, -side / 2, -side / 2, side, side);
       octx.restore();
     }
   }
   return out;
 }
 
-function buildMoire(tile, W, H, center, s) {
+function drawMirrorGrid(ctx, tile, W, H, nC, nR, alpha) {
   const tw = tile.width, th = tile.height;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  const xs = [], ys = [];
+  for (let i = 0; i <= nC; i++) xs.push(Math.round(i * W / nC));
+  for (let j = 0; j <= nR; j++) ys.push(Math.round(j * H / nR));
+  for (let j = 0; j < nR; j++) {
+    for (let i = 0; i < nC; i++) {
+      const w = xs[i + 1] - xs[i], h = ys[j + 1] - ys[j];
+      const fx = (i & 1) === 1, fy = (j & 1) === 1;
+      ctx.save();
+      ctx.translate(xs[i] + (fx ? w : 0), ys[j] + (fy ? h : 0));
+      ctx.scale(fx ? -1 : 1, fy ? -1 : 1);
+      ctx.drawImage(tile, 0, 0, tw, th, 0, 0, w, h);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
+function buildMoire(tile, W, H, center, s) {
   const out = document.createElement('canvas');
   out.width = W; out.height = H;
   const octx = out.getContext('2d');
-  const step = s;
-  const n = Math.ceil(Math.max(W, H) / step) + 2;
-
-  for (let i = -n; i < n; i++) {
-    for (let j = -n; j < n; j++) {
-      octx.drawImage(tile, i * step, j * step, tw, th);
-    }
-  }
-
-  octx.save();
-  octx.globalAlpha = 0.5;
-  octx.translate(W / 2, H / 2);
-  octx.rotate(0.05);
-  octx.translate(-W / 2, -H / 2);
-  for (let i = -n; i < n; i++) {
-    for (let j = -n; j < n; j++) {
-      octx.drawImage(tile, i * step, j * step, tw, th);
-    }
-  }
-  octx.restore();
+  // чётное число ячеек -> зеркальная сетка замыкается по краям
+  const nC = Math.max(2, 2 * Math.round(W / (2 * s)));
+  const nR = Math.max(2, 2 * Math.round(H / (2 * s)));
+  drawMirrorGrid(octx, tile, W, H, nC, nR, 1);
+  drawMirrorGrid(octx, tile, W, H, nC + 2, nR + 2, 0.5);
   return out;
 }
 
 function buildVoronoi(tile, W, H, center, s) {
   const tw = tile.width, th = tile.height;
+  const tileData = tile.getContext('2d').getImageData(0, 0, tw, th).data;
   const out = document.createElement('canvas');
   out.width = W; out.height = H;
   const octx = out.getContext('2d');
-  const seed = (i) => {
-    const x = Math.sin(i * 78.233) * 43758.5453;
-    return x - Math.floor(x);
-  };
-  const cell = s;
-  const nCols = Math.ceil(W / cell) + 2;
-  const nRows = Math.ceil(H / cell) + 2;
-  const cells = [];
-  for (let row = -1; row < nRows; row++) {
-    for (let col = -1; col < nCols; col++) {
-      const id = (row * 73856093) ^ (col * 19349663);
-      const jx = (seed(id) - 0.5) * cell * 0.4;
-      const jy = (seed(id * 3) - 0.5) * cell * 0.4;
-      const rot = seed(id * 5) * Math.PI * 2;
-      cells.push({ dx: col * cell + jx, dy: row * cell + jy, rot, id });
+  const outImg = octx.createImageData(W, H);
+  const outData = outImg.data;
+  const hash = (i, j, k) => { const x = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453; return x - Math.floor(x); };
+  const nC = Math.max(1, Math.round(W / s)), nR = Math.max(1, Math.round(H / s));
+  const cw = W / nC, ch = H / nR;
+  const n = nC * nR;
+  const offX = new Float64Array(n), offY = new Float64Array(n), cR = new Float64Array(n), sR = new Float64Array(n), fl = new Float64Array(n);
+  for (let j = 0; j < nR; j++) for (let i = 0; i < nC; i++) {
+    const q = j * nC + i;
+    offX[q] = (0.5 + (hash(i, j, 1) - 0.5) * 0.8) * cw;
+    offY[q] = (0.5 + (hash(i, j, 2) - 0.5) * 0.8) * ch;
+    const a = hash(i, j, 3) * Math.PI * 2;
+    cR[q] = Math.cos(a); sR[q] = Math.sin(a);
+    fl[q] = hash(i, j, 4) > 0.5 ? -1 : 1;
+  }
+  const mr = (v, L) => { const L2 = 2 * L, p = ((v % L2) + L2) % L2; return p <= L ? p : L2 - p; };
+  const scale = Math.max(cw, ch);
+  for (let y = 0; y < H; y++) {
+    const cj = Math.floor(y / ch);
+    for (let x = 0; x < W; x++) {
+      const ci = Math.floor(x / cw);
+      let best = Infinity, bx = 0, by = 0, bq = 0;
+      for (let dj = -1; dj <= 1; dj++) {
+        const rj = cj + dj, wj = ((rj % nR) + nR) % nR;
+        for (let di = -1; di <= 1; di++) {
+          const ri = ci + di, wi = ((ri % nC) + nC) % nC;
+          const q = wj * nC + wi;
+          const sx = ri * cw + offX[q], sy = rj * ch + offY[q];
+          const d = (x - sx) * (x - sx) + (y - sy) * (y - sy);
+          if (d < best) { best = d; bx = sx; by = sy; bq = q; }
+        }
+      }
+      const dx = x - bx, dy = y - by;
+      const rx = (dx * cR[bq] + dy * sR[bq]) * fl[bq];
+      const ry = -dx * sR[bq] + dy * cR[bq];
+      sampleBilinearInto(tileData, tw, th, mr((rx / scale + 0.5) * tw, tw), mr((ry / scale + 0.5) * th, th), outData, (y * W + x) * 4);
     }
   }
-  cells.sort((a, b) => a.id - b.id);
-  for (const d of cells) {
-    octx.save();
-    octx.translate(d.dx + cell / 2, d.dy + cell / 2);
-    octx.rotate(d.rot);
-    octx.drawImage(tile, 0, 0, tw, th, -cell / 2, -cell / 2, cell, cell);
-    octx.restore();
-  }
+  octx.putImageData(outImg, 0, 0);
   return out;
 }
 
@@ -1868,6 +1642,10 @@ function buildMirrorBlock(tile, useMirror) {
   bctx.save(); bctx.translate(0, s * 2); bctx.scale(1, -1); bctx.drawImage(tile, 0, 0); bctx.restore();
   bctx.save(); bctx.translate(s * 2, s * 2); bctx.scale(-1, -1); bctx.drawImage(tile, 0, 0); bctx.restore();
   return block;
+}
+
+function isHexMode(mode) {
+  return mode === 'hexagon' || mode === 'hexagon12' || mode === 'triangle6' || mode === 'triangle12';
 }
 
 function buildPatternElement(mode, tile, W, H, c, s) {
@@ -1903,7 +1681,7 @@ function drawThumb() {
   let el;
   if (mode === 'truchet' || mode === 'moire' || mode === 'voronoi') {
     el = buildPatternElement(mode, tileCanvas, 64, 64, { x: 32, y: 32 }, S);
-  } else if (mode === 'hexagon' || mode === 'hexagon12') {
+  } else if (isHexMode(mode)) {
     const boxW = Math.ceil(S * Math.sqrt(3) * 1.1);
     const boxH = Math.ceil(S * 2.05);
     el = buildPatternElement(mode, tileCanvas, boxW, boxH, { x: boxW/2, y: boxH/2 }, S);
@@ -1931,7 +1709,7 @@ function drawPatternPreview() {
     let el;
     if (mode === 'truchet' || mode === 'moire' || mode === 'voronoi') {
       el = buildPatternElement(mode, tile, 60, 60, { x: 30, y: 30 }, 24);
-    } else if (mode === 'hexagon' || mode === 'hexagon12') {
+    } else if (isHexMode(mode)) {
       const boxW = Math.ceil(24 * Math.sqrt(3) * 1.1);
       const boxH = Math.ceil(24 * 2.05);
       el = buildPatternElement(mode, tile, boxW, boxH, { x: boxW/2, y: boxH/2 }, 24);
@@ -1950,13 +1728,12 @@ function drawPatternPreview() {
 
 function paintPattern(ctx, W, H, mode, tile, overrideNX, overrideNY) {
   ctx.clearRect(0, 0, W, H);
-  paintBackdropIfChecker(ctx, W, H);
 
   const counts = (overrideNX != null && overrideNY != null)
     ? { nX: overrideNX, nY: overrideNY }
     : getTileCountInPreview();
 
-  if (mode === 'hexagon' || mode === 'hexagon12') {
+  if (isHexMode(mode)) {
     const boxW = Math.ceil(S * Math.sqrt(3) * 1.1);
     const boxH = Math.ceil(S * 2.05);
     const boxCenter = { x: boxW / 2, y: boxH / 2 };
@@ -2017,7 +1794,7 @@ function draw() {
   if (!workingImg) return;
   const mode = currentMode();
   const W = patternCanvas.width, H = patternCanvas.height;
-  const target = parseInt(exportSizeSelect.value, 10);
+  const target = Math.min(1024, parseInt(exportSizeSelect.value, 10)); // превью лёгкое, полный размер только при сохранении
   const e = calcExportParams(target);
 
   const cacheKey = e.w + 'x' + e.h + '|' + mode;
@@ -2048,7 +1825,7 @@ function draw() {
     patCtx.fillStyle = bgColorPicker.value;
     patCtx.fillRect(0, 0, W, H);
   } else {
-    patCtx.fillStyle = '#000';
+    patCtx.fillStyle = avgColor;
     patCtx.fillRect(0, 0, W, H);
   }
   const scale = Math.min(W / e.w, H / e.h);
@@ -2098,16 +1875,15 @@ function buildFinalCanvas() {
   const oldWorking = workingImg;
   const oldCenter = { ...viewCenter };
   const oldS = S;
-  const oldTileKey = tileCache.key, oldTileCanvas = tileCache.canvas;
-  const oldEdgeKey = edgeCache.key, oldEdgeCanvas = edgeCache.canvas;
 
   try {
     workingImg = sourceImg;
     viewCenter = { x: oldCenter.x * sc, y: oldCenter.y * sc };
-    let Sbig = e.s * sc;
+    // hex/truchet/moire/voronoi строят сетку прямо из S — там масштабировать S нельзя
+    const exactS = (isHexMode(mode) || ['truchet','moire','voronoi'].includes(mode));
+    let Sbig = exactS ? e.s : e.s * sc;
     if (Sbig > MAX_TILE_SIDE) Sbig = MAX_TILE_SIDE;
     S = Sbig;
-    invalidateCaches();
 
     const sizePx = Math.max(1, Math.ceil(S));
     const tileFromOriginal = document.createElement('canvas');
@@ -2120,7 +1896,8 @@ function buildFinalCanvas() {
       ctx.fillStyle = bgColorPicker.value;
       ctx.fillRect(0, 0, e.w, e.h);
     } else {
-      drawEdgeBackgroundWithImg(ctx, e.w, e.h, sourceImg);
+      ctx.fillStyle = avgColor;
+      ctx.fillRect(0, 0, e.w, e.h);
     }
 
     paintPattern(ctx, e.w, e.h, mode, tileFromOriginal, e.nX, e.nY);
@@ -2128,16 +1905,23 @@ function buildFinalCanvas() {
     workingImg = oldWorking;
     viewCenter = oldCenter;
     S = oldS;
-    tileCache.key = oldTileKey; tileCache.canvas = oldTileCanvas;
-    edgeCache.key = oldEdgeKey; edgeCache.canvas = oldEdgeCanvas;
+    tileCache.clear(); // не держим гигантские канвасы экспорта в памяти
   }
   return c;
 }
 
-downloadBtn.addEventListener('click', () => {
+function setBusy(b) {
+  downloadBtn.disabled = b; copyBtn.disabled = b;
+  downloadBtn.style.opacity = copyBtn.style.opacity = b ? '0.5' : '1';
+}
+const tick = () => new Promise(r => setTimeout(r, 50));
+
+downloadBtn.addEventListener('click', async () => {
   if (!workingImg) { alert('Choose a photo first.'); return; }
+  setBusy(true);
   showToast('Rendering...');
-  setTimeout(() => {
+  await tick();
+  try {
     const canvas = buildFinalCanvas();
     const format = exportFormatSelect.value;
     let outCanvas = canvas;
@@ -2145,7 +1929,7 @@ downloadBtn.addEventListener('click', () => {
       const flat = document.createElement('canvas');
       flat.width = canvas.width; flat.height = canvas.height;
       const fctx = flat.getContext('2d');
-      fctx.fillStyle = '#ffffff';
+      fctx.fillStyle = bgModeSelect.value === 'color' ? bgColorPicker.value : '#ffffff';
       fctx.fillRect(0, 0, canvas.width, canvas.height);
       fctx.drawImage(canvas, 0, 0);
       outCanvas = flat;
@@ -2155,28 +1939,58 @@ downloadBtn.addEventListener('click', () => {
     } else {
       const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
       const ext = format === 'jpeg' ? 'jpg' : 'png';
-      outCanvas.toBlob((blob) => {
-        downloadBlob(blob, `pattern_${outCanvas.width}x${outCanvas.height}.${ext}`);
-        showToast('Saved!');
-      }, mime, 0.95);
+      const blob = await new Promise(r => outCanvas.toBlob(r, mime, 0.95));
+      if (!blob) throw new Error('toBlob failed');
+      downloadBlob(blob, `pattern_${outCanvas.width}x${outCanvas.height}.${ext}`);
     }
-  }, 50);
+    showToast('Saved!');
+  } catch (err) {
+    console.error(err);
+    showToast('Not enough memory — pick a smaller export size');
+  } finally {
+    setBusy(false);
+  }
 });
 
 copyBtn.addEventListener('click', async () => {
   if (!workingImg) { alert('Choose a photo first.'); return; }
+  setBusy(true);
   showToast('Rendering...');
-  setTimeout(async () => {
+  await tick();
+  try {
     const canvas = buildFinalCanvas();
-    try {
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      showToast('📋 Copied to clipboard!');
-    } catch (err) {
-      showToast('Failed. Try Download instead.');
-    }
-  }, 50);
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    if (!blob) throw new Error('toBlob failed');
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    showToast('📋 Copied to clipboard!');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed. Try Save instead (or a smaller size).');
+  } finally {
+    setBusy(false);
+  }
 });
+
+// ============ ПОДСКАЗКИ ПО ТАПУ (тач-экраны) ============
+let tipHideTimer = null;
+document.querySelectorAll('.hint-icon').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    el.dispatchEvent(new Event('mouseenter'));
+    if (tipHideTimer) clearTimeout(tipHideTimer);
+    tipHideTimer = setTimeout(() => tooltip.classList.remove('visible'), 3500);
+  });
+});
+document.addEventListener('click', () => tooltip.classList.remove('visible'));
+
+// ============ ВЫСОТА ЭКРАНА НА МОБИЛЬНЫХ ============
+// Браузеры без 100dvh: 100vh включает область под адресной строкой -> кнопка Save уезжает за экран.
+if (!(window.CSS && CSS.supports && CSS.supports('height', '100dvh'))) {
+  const setAppH = () => document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px');
+  setAppH();
+  window.addEventListener('resize', setAppH);
+  window.addEventListener('orientationchange', setAppH);
+}
 
 // ============ ИНИЦИАЛИЗАЦИЯ ============
 S = sliderToS(parseFloat(countSlider.value));
