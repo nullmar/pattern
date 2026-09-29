@@ -90,6 +90,12 @@
     box-shadow: 0 0 8px rgba(45,108,223,0.5);
   }
   .pattern-preview-box canvas { width: 100%; height: 100%; display: block; }
+  #seamBtn {
+    position:absolute; top:10px; right:10px; z-index:5;
+    background:rgba(30,30,30,.85); color:var(--text); border:1px solid #555; border-radius:16px;
+    padding:5px 12px; font-size:12px; cursor:pointer;
+  }
+  #seamBtn.on { background:var(--accent); border-color:var(--accent); color:#fff; }
   #patternSelect {
     background: #2a3242;
     color: #fff;
@@ -248,6 +254,7 @@
 
   <div class="center-col">
     <canvas id="patternCanvas" width="900" height="900"></canvas>
+    <button id="seamBtn" title="Shift the preview by 50% to reveal seams">⊞ Seam check</button>
   </div>
 
   <div class="right-col">
@@ -299,6 +306,7 @@
               <option value="mirror">Mirror 2×2</option>
               <option value="rot180">Diamond mirror (cmm)</option>
               <option value="pmm">Rectangular (pmm)</option>
+              <option value="gridblend">Grid (seamless blend)</option>
               <option value="moire">Moiré (mirror layers)</option>
             </optgroup>
             <optgroup label="Plain repeat (depends on photo)">
@@ -343,6 +351,14 @@
           <span class="val" id="countVal">5 × 3</span>
         </div>
         <input type="range" id="countSlider" min="20" max="160" value="60" step="0.01">
+
+        <div class="field-row">
+          <label>Waves
+            <span class="hint-icon" data-tip="Wavy distortion of the finished pattern. One wave per tile, so seamless patterns stay seamless.">?</span>
+          </label>
+          <span class="val" id="waveVal">0</span>
+        </div>
+        <input type="range" id="waveSlider" min="0" max="100" value="0">
       </div>
     </div>
 
@@ -395,11 +411,20 @@
         <div class="section-title">Export</div>
         <div class="section-body">
           <div class="field-row">
+            <label>Layout</label>
+            <select id="exportLayoutSelect" style="width:auto;">
+              <option value="repeats" selected>Repeats (as in preview)</option>
+              <option value="single">One tile (repeatable)</option>
+            </select>
+          </div>
+          <div class="field-row">
             <label>Size</label>
             <select id="exportSizeSelect" style="width:auto;">
-              <option value="1024">~1024</option>
-              <option value="2048" selected>~2048</option>
-              <option value="4096">~4096</option>
+              <option value="256">256</option>
+              <option value="512">512</option>
+              <option value="1024">1024</option>
+              <option value="2048" selected>2048</option>
+              <option value="4096">4096</option>
             </select>
           </div>
           <div class="field-row">
@@ -456,6 +481,11 @@ const resetViewBtn = document.getElementById('resetViewBtn');
 const countSlider = document.getElementById('countSlider');
 const countVal = document.getElementById('countVal');
 const exportSizeSelect = document.getElementById('exportSizeSelect');
+const exportLayoutSelect = document.getElementById('exportLayoutSelect');
+const waveSlider = document.getElementById('waveSlider');
+const waveVal = document.getElementById('waveVal');
+const seamBtn = document.getElementById('seamBtn');
+let seamCheck = false;
 const exportFormatSelect = document.getElementById('exportFormatSelect');
 const downloadBtn = document.getElementById('downloadBtn');
 const bgModeSelect = document.getElementById('bgModeSelect');
@@ -718,6 +748,16 @@ bgModeSelect.addEventListener('change', () => {
 });
 bgColorPicker.addEventListener('input', () => { invalidateCaches(); render(); });
 exportSizeSelect.addEventListener('change', () => { updateExportLine(); draw(); });
+exportLayoutSelect.addEventListener('change', updateExportLine);
+waveSlider.addEventListener('input', () => {
+  waveVal.textContent = Math.round(parseFloat(waveSlider.value));
+  scheduleHeavyRender();
+});
+seamBtn.addEventListener('click', () => {
+  seamCheck = !seamCheck;
+  seamBtn.classList.toggle('on', seamCheck);
+  draw();
+});
 
 function bindSlider(slider, label) {
   slider.addEventListener('input', () => {
@@ -1034,7 +1074,7 @@ function morphMask(m, N, dilate) {
 function computeRegionMask(mode) {
   const N = OV_N;
   const full = new Uint8Array(N * N).fill(1);
-  if (['mirror', 'grid', 'truchet', 'moire', 'voronoi'].includes(mode)) return full;
+  if (['mirror', 'grid', 'gridblend', 'truchet', 'moire', 'voronoi'].includes(mode)) return full;
   const mk = document.createElement('canvas');
   mk.width = mk.height = N;
   const mctx = mk.getContext('2d');
@@ -1150,11 +1190,19 @@ function getTileCountInPreview() {
   return { nX, nY };
 }
 
-function calcExportParams(target) {
+function isSingleExport() { return exportLayoutSelect.value === 'single'; }
+
+function calcExportParams(target, single) {
   const mode = currentMode();
-  const { nX, nY } = getTileCountInPreview();
+  const counts = single ? { nX: 1, nY: 1 } : getTileCountInPreview();
+  const { nX, nY } = counts;
   const isHex = (isHexMode(mode));
   const factor = (mode === 'mirror') ? 2 : 1;
+  if (isHex && single) {
+    // один период гекс-сетки: ширина = target, высота = √3·target (соотношение сторон 1 : 1.73)
+    const sOne = target / Math.sqrt(3);
+    return { w: target, h: Math.round(3 * sOne), nX: 1, nY: 1, s: sOne };
+  }
   if (isHex) {
     const sFromX = target / (Math.sqrt(3) * nX);
     const sFromY = target / (3 * nY);
@@ -1172,8 +1220,10 @@ function updatePeriodInfo() {
 
 function updateExportLine() {
   const target = parseInt(exportSizeSelect.value, 10);
-  const e = calcExportParams(target);
-  exportLine.innerHTML = `${e.nX} × ${e.nY} tiles → ${e.w}×${e.h}`;
+  const e = calcExportParams(target, isSingleExport());
+  exportLine.innerHTML = isSingleExport()
+    ? `1 tile → ${e.w}×${e.h}`
+    : `${e.nX} × ${e.nY} tiles → ${e.w}×${e.h}`;
 }
 
 function updateBgHint() {
@@ -1665,7 +1715,34 @@ function buildPatternElement(mode, tile, W, H, c, s) {
   if (mode === 'truchet') return buildTruchet(tile, W, H, c, s);
   if (mode === 'moire') return buildMoire(tile, W, H, c, s);
   if (mode === 'voronoi') return buildVoronoi(tile, W, H, c, s);
+  if (mode === 'gridblend') return makeSeamlessTile(buildMirrorBlock(tile, false));
   return buildMirrorBlock(tile, mode === 'mirror');
+}
+
+// Делает любой квадрат бесшовным: два прохода (по X, потом по Y) с кроссфейдом со сдвинутой на 50% копией.
+// Вес = 0 на краях (там берётся сдвинутая копия, стыкующаяся сама с собой) и 1 в центре, где у сдвинутой копии шов.
+function makeSeamlessTile(src) {
+  const w = src.width, h = src.height;
+  const a = src.getContext('2d').getImageData(0, 0, w, h).data;
+  const hx = w >> 1, hy = h >> 1;
+  const wx = new Float32Array(w), wy = new Float32Array(h);
+  for (let x = 0; x < w; x++) { const s = Math.sin(Math.PI * (x + 0.5) / w); wx[x] = s * s; }
+  for (let y = 0; y < h; y++) { const s = Math.sin(Math.PI * (y + 0.5) / h); wy[y] = s * s; }
+  const t = new Float32Array(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4, j = (y * w + (x + hx) % w) * 4, k = wx[x];
+    for (let c = 0; c < 4; c++) t[i + c] = a[i + c] * k + a[j + c] * (1 - k);
+  }
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const octx = out.getContext('2d');
+  const img = octx.createImageData(w, h), od = img.data;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4, j = (((y + hy) % h) * w + x) * 4, k = wy[y];
+    for (let c = 0; c < 4; c++) od[i + c] = t[i + c] * k + t[j + c] * (1 - k);
+  }
+  octx.putImageData(img, 0, 0);
+  return out;
 }
 
 function paintBackdropIfChecker(ctx, w, h) {
@@ -1815,6 +1892,7 @@ function draw() {
   S = e.s;
   try {
     paintPattern(off.getContext('2d'), e.w, e.h, mode, tileE, e.nX, e.nY);
+    applyWave(off, e.nX, e.nY);
   } finally {
     S = savedS;
   }
@@ -1833,7 +1911,40 @@ function draw() {
   const dx = (W - dw) / 2, dy = (H - dh) / 2;
   patCtx.imageSmoothingEnabled = true;
   patCtx.imageSmoothingQuality = 'high';
-  patCtx.drawImage(off, dx, dy, dw, dh);
+  if (seamCheck) {
+    // сдвиг на 50% с заворотом: если узор не бесшовный, шов окажется в центре крестом
+    patCtx.save();
+    patCtx.beginPath(); patCtx.rect(dx, dy, dw, dh); patCtx.clip();
+    for (const ox of [-dw / 2, dw / 2]) for (const oy of [-dh / 2, dh / 2]) patCtx.drawImage(off, dx + ox, dy + oy, dw, dh);
+    patCtx.restore();
+  } else {
+    patCtx.drawImage(off, dx, dy, dw, dh);
+  }
+}
+
+// Волны: периодическое смещение (одна волна на тайл) + выборка с заворотом => бесшовность сохраняется.
+function applyWave(canvas, nX, nY) {
+  const amt = parseFloat(waveSlider.value);
+  if (!(amt > 0)) return;
+  const W = canvas.width, H = canvas.height, ctx = canvas.getContext('2d');
+  const sd = ctx.getImageData(0, 0, W, H).data;
+  const out = ctx.createImageData(W, H), od = out.data;
+  const A = amt / 100 * 0.25 * Math.min(W / nX, H / nY);
+  const TP = 2 * Math.PI;
+  for (let y = 0; y < H; y++) {
+    const ddx = A * Math.sin(TP * nY * y / H);
+    for (let x = 0; x < W; x++) {
+      let sx = x + ddx, sy = y + A * Math.sin(TP * nX * x / W);
+      sx = ((sx % W) + W) % W; sy = ((sy % H) + H) % H;
+      const x0 = Math.floor(sx), y0 = Math.floor(sy), fx = sx - x0, fy = sy - y0;
+      const x1 = (x0 + 1) % W, y1 = (y0 + 1) % H;
+      const i00 = (y0 * W + x0) * 4, i10 = (y0 * W + x1) * 4, i01 = (y1 * W + x0) * 4, i11 = (y1 * W + x1) * 4;
+      const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+      const o = (y * W + x) * 4;
+      for (let c = 0; c < 4; c++) od[o + c] = sd[i00 + c] * w00 + sd[i10 + c] * w10 + sd[i01 + c] * w01 + sd[i11 + c] * w11;
+    }
+  }
+  ctx.putImageData(out, 0, 0);
 }
 
 function canvasToTGABlob(canvas) {
@@ -1865,7 +1976,7 @@ function buildFinalCanvas() {
   if (!workingImg) return null;
   const mode = currentMode();
   const target = parseInt(exportSizeSelect.value, 10);
-  const e = calcExportParams(target);
+  const e = calcExportParams(target, isSingleExport());
   const sc = sourceImg.width / workingImg.width;
 
   const c = document.createElement('canvas');
@@ -1901,6 +2012,7 @@ function buildFinalCanvas() {
     }
 
     paintPattern(ctx, e.w, e.h, mode, tileFromOriginal, e.nX, e.nY);
+    applyWave(c, e.nX, e.nY);
   } finally {
     workingImg = oldWorking;
     viewCenter = oldCenter;
@@ -1935,13 +2047,13 @@ downloadBtn.addEventListener('click', async () => {
       outCanvas = flat;
     }
     if (format === 'tga') {
-      downloadBlob(canvasToTGABlob(outCanvas), `pattern_${outCanvas.width}x${outCanvas.height}.tga`);
+      downloadBlob(canvasToTGABlob(outCanvas), `${isSingleExport() ? 'tile' : 'pattern'}_${outCanvas.width}x${outCanvas.height}.tga`);
     } else {
       const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
       const ext = format === 'jpeg' ? 'jpg' : 'png';
       const blob = await new Promise(r => outCanvas.toBlob(r, mime, 0.95));
       if (!blob) throw new Error('toBlob failed');
-      downloadBlob(blob, `pattern_${outCanvas.width}x${outCanvas.height}.${ext}`);
+      downloadBlob(blob, `${isSingleExport() ? 'tile' : 'pattern'}_${outCanvas.width}x${outCanvas.height}.${ext}`);
     }
     showToast('Saved!');
   } catch (err) {
