@@ -20,12 +20,16 @@ what you get before you export.
 
 |                                |                                                                                                                       |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| ⬢ **18 pattern types**         | Grouped in the list: seamless / plain repeat / decorative                                                             |
+| ⬢ **20 pattern types**         | Grouped in the list: seamless / plain repeat / decorative                                                             |
 | 🎨 **5 background modes**       | Checker, mirror, solid color, blur, edge — all follow scale, rotation and position                                    |
 | 📐 **Source shape preview**     | The blue outline is computed from the real pattern builder, so it shows exactly which part of the photo is used       |
-| 🎚️ **Live controls**           | Scale, rotation, tile size with instant preview                                                                       |
+| 🎚️ **Live controls**           | Scale, rotation, tile size and waves with instant preview; segments/twist for Mandala, gap for Mosaic                  |
+| 🎨 **Color correction**        | Brightness, contrast, saturation, hue, black & white / sepia — applied to the photo before the pattern is built, so backgrounds follow                 |
+| 🔀 **Variation**               | Smooth brightness/tint drift across the pattern so repeated tiles don't look identical; tile edges still match                                          |
+| 🔗 **Shareable settings**       | Everything (pattern, background, sliders, color, region) lives in the page URL `#…`; **Copy link to settings** shares it. The photo itself is not in the link |
+| ⊞ **Seam check**               | One click shifts the preview by 50% so any seam shows up in the middle                                                |
 | 🖱️ **Zoom & pan**              | Drag to move, mouse wheel or pinch to zoom in the Source preview; the area can't be dragged off the photo             |
-| 💾 **Export**                  | PNG (transparent), JPEG, TGA at ~1024 / ~2048 / ~4096 px, or copy to clipboard                                        |
+| 💾 **Export**                  | PNG (transparent), JPEG, TGA at 256–4096 px, or copy to clipboard. **Repeats** as in the preview, or **one tile** of exact size that repeats seamlessly |
 | 📱 **Works on phones**          | Layout follows the real visible height (no cut-off Save button), tap the `?` icons for hints                          |
 | 🔒 **100% client-side**         | Nothing is uploaded — everything runs in your browser                                                                 |
 
@@ -44,7 +48,7 @@ what you get before you export.
 
 ## 🧩 Pattern types
 
-**Seamless — tile edges match for any photo (11)**
+**Seamless — tile edges match for any photo (12)**
 
 - **Hexagon (6 sectors)** — classic 6-fold symmetry on a hex lattice
 - **Hexagon 12** — finer 12-sector version
@@ -56,17 +60,19 @@ what you get before you export.
 - **Diamond mirror (cmm)** — reflections on a diamond grid
 - **Rectangular (pmm)** — reflections across both axes
 - **Moiré (mirror layers)** — two overlapping mirrored grids
+- **Grid (seamless blend)** — plain repeat, but the tile is cross-faded with a half-shifted copy so any photo tiles (slight ghosting at the edges)
 
 **Plain repeat — seams depend on the photo (2)**
 
 - **Grid** — plain tiling, no mirrors
 - **Glide rows** — alternating flipped rows (visible seams between rows)
 
-**Decorative (5)**
+**Decorative (6)**
 
 - **Truchet tiles** — random rotation/flip of cells, edges wrap around
 - **Voronoi collage** — jittered, rotated cells, edges wrap around
-- **Penrose 10-fold / Hat 6-fold / Twisted star** — radial mirror medallions; nice on their own, but their edges don't tile
+- **Mandala (medallion)** — radial mirror medallion with adjustable **Segments** (4–24) and **Twist**; edges don't tile
+- **Mosaic — circles / rounded squares / hexagons** — the photo in cells with an adjustable **Gap**, gap color or transparent gap; tiles seamlessly as a lattice
 
 ---
 

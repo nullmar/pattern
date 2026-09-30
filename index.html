@@ -316,11 +316,46 @@
             <optgroup label="Decorative">
               <option value="truchet">Truchet tiles (edges wrap)</option>
               <option value="voronoi">Voronoi collage (edges wrap)</option>
-              <option value="penrose">Penrose 10-fold (medallion)</option>
-              <option value="hat">Hat 6-fold (medallion)</option>
-              <option value="pinwheel">Twisted star (medallion)</option>
+              <option value="mandala">Mandala (medallion)</option>
+              <option value="mosaiccircle">Mosaic — circles</option>
+              <option value="mosaicsquare">Mosaic — rounded squares</option>
+              <option value="mosaichex">Mosaic — hexagons</option>
             </optgroup>
           </select>
+        </div>
+
+        <div id="mandalaControls" style="display:none; margin-top:10px;">
+          <div class="field-row">
+            <label>Segments
+              <span class="hint-icon" data-tip="Number of mirrored segments around the center.">?</span>
+            </label>
+            <span class="val" id="mandalaNVal">10</span>
+          </div>
+          <input type="range" id="mandalaN" min="4" max="24" step="2" value="10">
+          <div class="field-row">
+            <label>Twist
+              <span class="hint-icon" data-tip="Spiral twist of the segments. 0 = straight rays.">?</span>
+            </label>
+            <span class="val" id="mandalaTwistVal">0</span>
+          </div>
+          <input type="range" id="mandalaTwist" min="0" max="100" value="0">
+        </div>
+
+        <div id="mosaicControls" style="display:none; margin-top:10px;">
+          <div class="field-row">
+            <label>Gap
+              <span class="hint-icon" data-tip="Space between the cells, in % of the cell size.">?</span>
+            </label>
+            <span class="val" id="mosaicGapVal">12</span>
+          </div>
+          <input type="range" id="mosaicGap" min="0" max="40" value="12">
+          <div class="field-row">
+            <label>Gap color</label>
+            <input type="color" id="mosaicGapColor" value="#111111" style="width:60px; height:26px; padding:0;">
+          </div>
+          <label style="display:flex; gap:6px; align-items:center; font-size:12px; margin-top:6px; cursor:pointer;">
+            <input type="checkbox" id="mosaicGapClear"> Transparent gap (shows the background)
+          </label>
         </div>
       </div>
     </div>
@@ -359,6 +394,15 @@
           <span class="val" id="waveVal">0</span>
         </div>
         <input type="range" id="waveSlider" min="0" max="100" value="0">
+
+        <div class="field-row">
+          <label>Variation
+            <span class="hint-icon" data-tip="Smooth random drift of brightness and tint across the pattern, so repeated tiles don't look identical. Edges still match. Not applied to 'One tile' export.">?</span>
+          </label>
+          <span class="val" id="varVal">0</span>
+        </div>
+        <input type="range" id="varSlider" min="0" max="100" value="0">
+        <button id="varSeedBtn" class="reset-btn" style="margin-top:6px;"><span class="icon">🎲</span><span>New variation</span></button>
       </div>
     </div>
 
@@ -378,18 +422,6 @@
 
     <div class="section">
       <div class="section-title">
-        Palette
-        <span class="hint-icon" data-tip="5 dominant colors extracted from your photo. Click a color to use it as the background color.">?</span>
-      </div>
-      <div class="section-body">
-        <div class="palette-row" id="paletteRow">
-          <div style="font-size:11px; color:var(--muted);">Load a photo to see colors</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">
         Background
         <span class="hint-icon" data-tip="What fills the areas OUTSIDE the photo when the region goes past the image edges.">?</span>
       </div>
@@ -403,6 +435,40 @@
         </select>
         <input type="color" id="bgColorPicker" value="#000000" style="display:none;">
         <div class="hint" id="bgHint">Transparent checkerboard.</div>
+
+        <div id="paletteBlock" style="display:none;">
+          <div class="field-row" style="margin-top:10px;">
+            <label>Palette
+              <span class="hint-icon" data-tip="5 dominant colors extracted from your photo. Click a color to use it as the background color.">?</span>
+            </label>
+          </div>
+          <div class="palette-row" id="paletteRow">
+            <div style="font-size:11px; color:var(--muted);">Load a photo to see colors</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Color</div>
+      <div class="section-body">
+        <div class="field-row"><label>Brightness</label><span class="val" id="cBrightVal">0</span></div>
+        <input type="range" id="cBright" min="-100" max="100" value="0">
+        <div class="field-row"><label>Contrast</label><span class="val" id="cContrastVal">0</span></div>
+        <input type="range" id="cContrast" min="-100" max="100" value="0">
+        <div class="field-row"><label>Saturation</label><span class="val" id="cSatVal">0</span></div>
+        <input type="range" id="cSat" min="-100" max="100" value="0">
+        <div class="field-row"><label>Hue</label><span class="val" id="cHueVal">0</span></div>
+        <input type="range" id="cHue" min="-180" max="180" value="0">
+        <div class="field-row">
+          <label>Tone</label>
+          <select id="cTone" style="width:auto;">
+            <option value="none" selected>None</option>
+            <option value="bw">Black &amp; white</option>
+            <option value="sepia">Sepia</option>
+          </select>
+        </div>
+        <button id="colorReset" class="reset-btn" style="margin-top:6px;"><span class="icon">⟲</span><span>Reset color</span></button>
       </div>
     </div>
 
@@ -439,6 +505,7 @@
       </div>
       <div class="file-info" id="exportLine">—</div>
       <div class="bottom-actions">
+        <button class="copy" id="linkBtn" title="The link stores the settings, not the photo"><span class="icon">🔗</span><span>Copy link to settings</span></button>
         <button class="copy" id="copyBtn"><span class="icon">📋</span><span>Copy to clipboard</span></button>
         <button class="save" id="downloadBtn"><span class="icon">⬇</span><span>Save</span></button>
       </div>
@@ -486,6 +553,37 @@ const waveSlider = document.getElementById('waveSlider');
 const waveVal = document.getElementById('waveVal');
 const seamBtn = document.getElementById('seamBtn');
 let seamCheck = false;
+const mandalaControls = document.getElementById('mandalaControls');
+const mandalaN = document.getElementById('mandalaN');
+const mandalaNVal = document.getElementById('mandalaNVal');
+const mandalaTwist = document.getElementById('mandalaTwist');
+const mandalaTwistVal = document.getElementById('mandalaTwistVal');
+const mosaicControls = document.getElementById('mosaicControls');
+const mosaicGapSlider = document.getElementById('mosaicGap');
+const mosaicGapVal = document.getElementById('mosaicGapVal');
+const mosaicGapColor = document.getElementById('mosaicGapColor');
+const mosaicGapClear = document.getElementById('mosaicGapClear');
+const varSlider = document.getElementById('varSlider');
+const varVal = document.getElementById('varVal');
+const varSeedBtn = document.getElementById('varSeedBtn');
+const cBright = document.getElementById('cBright');
+const cContrast = document.getElementById('cContrast');
+const cSat = document.getElementById('cSat');
+const cHue = document.getElementById('cHue');
+const cTone = document.getElementById('cTone');
+const colorReset = document.getElementById('colorReset');
+let varSeed = 12345;
+let probeMode = false; // true, пока считаем оверлей области: шов должен быть прозрачным
+function mandalaSegments() { return parseInt(mandalaN.value, 10); }
+function mandalaTwistAmount() { return parseFloat(mandalaTwist.value) / 100 * 3; }
+function mosaicGapFrac() { return parseFloat(mosaicGapSlider.value) / 100; }
+function mosaicGapFill() { return (probeMode || mosaicGapClear.checked) ? null : mosaicGapColor.value; }
+function isFullCanvasMode(mode) { return ['truchet', 'moire', 'voronoi', 'mosaiccircle', 'mosaicsquare'].includes(mode); }
+function updateModeControls() {
+  const m = currentMode();
+  mandalaControls.style.display = (m === 'mandala') ? 'block' : 'none';
+  mosaicControls.style.display = m.startsWith('mosaic') ? 'block' : 'none';
+}
 const exportFormatSelect = document.getElementById('exportFormatSelect');
 const downloadBtn = document.getElementById('downloadBtn');
 const bgModeSelect = document.getElementById('bgModeSelect');
@@ -496,6 +594,7 @@ let S = 60;
 let sourceImg = null;
 let workingImg = null;
 let viewCenter = { x: 0, y: 0 };
+let pendingView = null; // положение области из ссылки, пока фото ещё не загружено
 let panStart = null;
 let currentModeVal = 'hexagon';
 let avgColor = '#000';
@@ -556,6 +655,13 @@ function loadImage(img, name) {
   const finalize = (wImg) => {
     workingImg = wImg;
     viewCenter = { x: wImg.width / 2, y: wImg.height / 2 };
+    if (pendingView) {
+      viewCenter = {
+        x: Math.min(1, Math.max(0, pendingView.fx)) * wImg.width,
+        y: Math.min(1, Math.max(0, pendingView.fy)) * wImg.height
+      };
+      pendingView = null;
+    }
     invalidateCaches();
     avgColor = computeAvgColor(wImg);
     extractPalette();
@@ -692,6 +798,7 @@ function renderPalette(colors) {
       bgModeSelect.value = 'color';
       bgColorPicker.value = hex;
       bgColorPicker.style.display = 'block';
+      document.getElementById('paletteBlock').style.display = 'block';
       updateBgHint();
       invalidateCaches();
       render();
@@ -718,6 +825,7 @@ randomBtn.addEventListener('click', applyRandom);
 
 patternSelect.addEventListener('change', () => {
   currentModeVal = patternSelect.value;
+  updateModeControls();
   invalidateCaches();
   updatePeriodInfo();
   updateExportLine();
@@ -742,6 +850,7 @@ resetViewBtn.addEventListener('click', () => {
 
 bgModeSelect.addEventListener('change', () => {
   bgColorPicker.style.display = (bgModeSelect.value === 'color') ? 'block' : 'none';
+  document.getElementById('paletteBlock').style.display = (bgModeSelect.value === 'color') ? 'block' : 'none';
   updateBgHint();
   invalidateCaches();
   render();
@@ -752,6 +861,45 @@ exportLayoutSelect.addEventListener('change', updateExportLine);
 waveSlider.addEventListener('input', () => {
   waveVal.textContent = Math.round(parseFloat(waveSlider.value));
   scheduleHeavyRender();
+});
+[mandalaN, mandalaTwist, mosaicGapSlider, mosaicGapColor, mosaicGapClear].forEach(el => {
+  el.addEventListener('input', () => {
+    mandalaNVal.textContent = mandalaN.value;
+    mandalaTwistVal.textContent = mandalaTwist.value;
+    mosaicGapVal.textContent = mosaicGapSlider.value;
+    drawSelector();
+    scheduleHeavyRender();
+  });
+});
+varSlider.addEventListener('input', () => {
+  varVal.textContent = Math.round(parseFloat(varSlider.value));
+  scheduleHeavyRender();
+});
+varSeedBtn.addEventListener('click', () => {
+  varSeed = Math.floor(Math.random() * 1e9);
+  if (parseFloat(varSlider.value) === 0) { varSlider.value = 40; varVal.textContent = '40'; }
+  draw();
+});
+function refreshColorLabels() {
+  document.getElementById('cBrightVal').textContent = cBright.value;
+  document.getElementById('cContrastVal').textContent = cContrast.value;
+  document.getElementById('cSatVal').textContent = cSat.value;
+  document.getElementById('cHueVal').textContent = cHue.value;
+}
+[cBright, cContrast, cSat, cHue, cTone].forEach(el => {
+  el.addEventListener('input', () => {
+    refreshColorLabels();
+    invalidateCaches();
+    drawSelector();
+    scheduleHeavyRender();
+  });
+});
+colorReset.addEventListener('click', () => {
+  cBright.value = cContrast.value = cSat.value = cHue.value = 0;
+  cTone.value = 'none';
+  refreshColorLabels();
+  invalidateCaches();
+  render();
 });
 seamBtn.addEventListener('click', () => {
   seamCheck = !seamCheck;
@@ -1033,13 +1181,125 @@ function drawSourceInto(ctx, sizePx, img) {
   } else if (mode === 'mirror' || mode === 'mirror-region') {
     drawBorderFill(ctx, sizePx, img, 'mirror');
   }
-  drawImageTransformed(ctx, sizePx, img);
+  if (!colorAdjustActive()) { drawImageTransformed(ctx, sizePx, img); return; }
+  if (mode === 'color') {
+    // однотонная заливка не должна менять цвет: корректируем только фото, отдельным слоем
+    const layer = document.createElement('canvas');
+    layer.width = layer.height = sizePx;
+    const lctx = layer.getContext('2d');
+    drawImageTransformed(lctx, sizePx, img);
+    applyColorAdjust(lctx, sizePx, sizePx);
+    ctx.drawImage(layer, 0, 0);
+  } else {
+    drawImageTransformed(ctx, sizePx, img);
+    applyColorAdjust(ctx, sizePx, sizePx);
+  }
+}
+
+function colorAdjustActive() {
+  return (+cBright.value) !== 0 || (+cContrast.value) !== 0 || (+cSat.value) !== 0 || (+cHue.value) !== 0 || cTone.value !== 'none';
+}
+function colorKey() {
+  return cBright.value + ',' + cContrast.value + ',' + cSat.value + ',' + cHue.value + ',' + cTone.value;
+}
+
+// Поточечная коррекция (без ctx.filter — он не работает в Safari). Прозрачные пиксели не трогаем.
+function applyColorAdjust(ctx, w, h) {
+  const img = ctx.getImageData(0, 0, w, h), d = img.data;
+  const bAdd = (+cBright.value) / 100 * 80;
+  const C = (+cContrast.value) / 100;
+  const cf = C >= 0 ? 1 + C * 1.5 : 1 + C;
+  const sat = 1 + (+cSat.value) / 100;
+  const hue = (+cHue.value) * Math.PI / 180;
+  const tone = cTone.value;
+  const lut = new Uint8ClampedArray(256);
+  for (let v = 0; v < 256; v++) lut[v] = (v - 128) * cf + 128 + bAdd;
+  const hueOn = hue !== 0, satOn = sat !== 1;
+  const co = Math.cos(hue), si = Math.sin(hue);
+  const m00 = 0.213 + co * 0.787 - si * 0.213, m01 = 0.715 - co * 0.715 - si * 0.715, m02 = 0.072 - co * 0.072 + si * 0.928;
+  const m10 = 0.213 - co * 0.213 + si * 0.143, m11 = 0.715 + co * 0.285 + si * 0.140, m12 = 0.072 - co * 0.072 - si * 0.283;
+  const m20 = 0.213 - co * 0.213 - si * 0.787, m21 = 0.715 - co * 0.715 + si * 0.715, m22 = 0.072 + co * 0.928 + si * 0.072;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue;
+    let r = d[i], g = d[i + 1], b = d[i + 2];
+    if (hueOn) {
+      const nr = m00 * r + m01 * g + m02 * b, ng = m10 * r + m11 * g + m12 * b, nb = m20 * r + m21 * g + m22 * b;
+      r = nr; g = ng; b = nb;
+    }
+    if (satOn) {
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+      r = gray + (r - gray) * sat; g = gray + (g - gray) * sat; b = gray + (b - gray) * sat;
+    }
+    if (tone === 'bw') {
+      r = g = b = 0.299 * r + 0.587 * g + 0.114 * b;
+    } else if (tone === 'sepia') {
+      const nr = 0.393 * r + 0.769 * g + 0.189 * b, ng = 0.349 * r + 0.686 * g + 0.168 * b, nb = 0.272 * r + 0.534 * g + 0.131 * b;
+      r = nr; g = ng; b = nb;
+    }
+    d[i] = lut[r < 0 ? 0 : r > 255 ? 255 : r | 0];
+    d[i + 1] = lut[g < 0 ? 0 : g > 255 ? 255 : g | 0];
+    d[i + 2] = lut[b < 0 ? 0 : b > 255 ? 255 : b | 0];
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+// Вариативность: плавное поле яркости/оттенка с целыми частотами по размеру холста.
+// Поле периодично по холсту => края стыкуются; но оно не кратно размеру тайла => плитки отличаются друг от друга.
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function applyVariation(canvas, nX, nY) {
+  const amt = parseFloat(varSlider.value) / 100;
+  if (!(amt > 0)) return;
+  const W = canvas.width, H = canvas.height, ctx = canvas.getContext('2d');
+  const img = ctx.getImageData(0, 0, W, H), d = img.data;
+  const rnd = mulberry32(varSeed), TP = 2 * Math.PI;
+  // частоты вокруг размера тайла, но не кратные ему (иначе все плитки получили бы одно и то же)
+  const pickF = (n) => {
+    let a = Math.max(1, Math.round(n * 0.5)) + Math.floor(rnd() * Math.max(2, Math.round(n * 1.2)));
+    if (n > 1 && a % n === 0) a++;
+    return a;
+  };
+  // 2 поля (яркость, оттенок) × 3 синуса; sin(A+B) = sinA·cosB + cosA·sinB, чтобы не считать sin на каждый пиксель
+  const terms = [];
+  for (let k = 0; k < 6; k++) {
+    const ax = pickF(nX), ay = pickF(nY), ph = rnd() * TP;
+    const sX = new Float32Array(W), cX = new Float32Array(W), sY = new Float32Array(H), cY = new Float32Array(H);
+    for (let x = 0; x < W; x++) { const a = TP * ax * x / W + ph; sX[x] = Math.sin(a); cX[x] = Math.cos(a); }
+    for (let y = 0; y < H; y++) { const b = TP * ay * y / H; sY[y] = Math.sin(b); cY[y] = Math.cos(b); }
+    terms.push({ sX, cX, sY, cY });
+  }
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (d[i + 3] === 0) continue;
+      let f1 = 0, f2 = 0;
+      for (let k = 0; k < 3; k++) { const T = terms[k]; f1 += T.sX[x] * T.cY[y] + T.cX[x] * T.sY[y]; }
+      for (let k = 3; k < 6; k++) { const T = terms[k]; f2 += T.sX[x] * T.cY[y] + T.cX[x] * T.sY[y]; }
+      const L = 1 + 0.6 * amt * (f1 / 2), th = 0.9 * amt * (f2 / 2);
+      const c = Math.cos(th), s = Math.sin(th);
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      const Y = (0.299 * r + 0.587 * g + 0.114 * b) * L;
+      const I = 0.596 * r - 0.274 * g - 0.322 * b, Q = 0.211 * r - 0.523 * g + 0.312 * b;
+      const I2 = I * c - Q * s, Q2 = I * s + Q * c;
+      const R = Y + 0.956 * I2 + 0.621 * Q2, G = Y - 0.272 * I2 - 0.647 * Q2, B = Y - 1.106 * I2 + 1.703 * Q2;
+      d[i] = R < 0 ? 0 : R > 255 ? 255 : R;
+      d[i + 1] = G < 0 ? 0 : G > 255 ? 255 : G;
+      d[i + 2] = B < 0 ? 0 : B > 255 ? 255 : B;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
 }
 
 function buildTileCanvas(sizePx, img) {
   const imgType = (img === sourceImg) ? 'orig' : 'work';
   const imgW = img ? img.width : 0;
-  const key = sizePx + '|' + imgType + '|' + imgW + '|' + viewCenter.x + '|' + viewCenter.y + '|' + rotSlider.value + '|' + scaleSlider.value + '|' + bgModeSelect.value + '|' + bgColorPicker.value;
+  const key = sizePx + '|' + imgType + '|' + imgW + '|' + viewCenter.x + '|' + viewCenter.y + '|' + rotSlider.value + '|' + scaleSlider.value + '|' + bgModeSelect.value + '|' + bgColorPicker.value + '|' + colorKey();
   const cachedTile = tileCache.get(key);
   if (cachedTile) return cachedTile;
   const c = document.createElement('canvas');
@@ -1089,7 +1349,9 @@ function computeRegionMask(mode) {
     W = Math.ceil(N * Math.sqrt(3) * 1.1); H = Math.ceil(N * 2.05);
     c = { x: W / 2, y: H / 2 };
   }
-  const el = buildPatternElement(mode, mk, W, H, c, N);
+  let el;
+  probeMode = true;
+  try { el = buildPatternElement(mode, mk, W, H, c, N); } finally { probeMode = false; }
   const od = el.getContext('2d').getImageData(0, 0, W, H).data;
   let m = new Uint8Array(N * N);
   let any = false;
@@ -1107,7 +1369,8 @@ function computeRegionMask(mode) {
 }
 
 function getOverlayCanvas(mode) {
-  if (overlayCache[mode]) return overlayCache[mode];
+  const okey = mode + (mode === 'mandala' ? '|' + mandalaSegments() : '') + (mode.startsWith('mosaic') ? '|' + mosaicGapSlider.value : '');
+  if (overlayCache[okey]) return overlayCache[okey];
   const N = OV_N;
   const m = computeRegionMask(mode);
   const cv = document.createElement('canvas');
@@ -1124,7 +1387,7 @@ function getOverlayCanvas(mode) {
     }
   }
   cx.putImageData(img, 0, 0);
-  overlayCache[mode] = cv;
+  overlayCache[okey] = cv;
   return cv;
 }
 
@@ -1695,7 +1958,7 @@ function buildMirrorBlock(tile, useMirror) {
 }
 
 function isHexMode(mode) {
-  return mode === 'hexagon' || mode === 'hexagon12' || mode === 'triangle6' || mode === 'triangle12';
+  return mode === 'hexagon' || mode === 'hexagon12' || mode === 'triangle6' || mode === 'triangle12' || mode === 'mosaichex';
 }
 
 function buildPatternElement(mode, tile, W, H, c, s) {
@@ -1715,8 +1978,72 @@ function buildPatternElement(mode, tile, W, H, c, s) {
   if (mode === 'truchet') return buildTruchet(tile, W, H, c, s);
   if (mode === 'moire') return buildMoire(tile, W, H, c, s);
   if (mode === 'voronoi') return buildVoronoi(tile, W, H, c, s);
+  if (mode === 'mandala') return buildMirrorSectors(tile, W, H, c, s, 2 * Math.PI / mandalaSegments(), 0, mandalaTwistAmount());
+  if (mode === 'mosaiccircle') return buildMosaicGrid(tile, W, H, c, s, 'circle');
+  if (mode === 'mosaicsquare') return buildMosaicGrid(tile, W, H, c, s, 'rounded');
+  if (mode === 'mosaichex') return buildMosaicHex(tile, W, H, c, s);
   if (mode === 'gridblend') return makeSeamlessTile(buildMirrorBlock(tile, false));
   return buildMirrorBlock(tile, mode === 'mirror');
+}
+
+// Мозаика на квадратной решётке: клетка s×s, внутри фигура (круг / скруглённый квадрат) с промежутком.
+function buildMosaicGrid(tile, W, H, center, s, shape) {
+  const tw = tile.width, th = tile.height;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const ctx = out.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  const cell = s;
+  const nCols = Math.max(1, Math.round(W / cell)), nRows = Math.max(1, Math.round(H / cell));
+  const R = cell / 2 * (1 - mosaicGapFrac());
+  const fill = mosaicGapFill();
+  for (let row = 0; row < nRows; row++) {
+    for (let col = 0; col < nCols; col++) {
+      const x0 = col * cell, y0 = row * cell, cx = x0 + cell / 2, cy = y0 + cell / 2;
+      if (fill) { ctx.fillStyle = fill; ctx.fillRect(x0, y0, cell + 0.5, cell + 0.5); }
+      ctx.save();
+      ctx.beginPath();
+      if (shape === 'circle') {
+        ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      } else {
+        const r = R * 0.35;
+        ctx.moveTo(cx - R + r, cy - R);
+        ctx.arcTo(cx + R, cy - R, cx + R, cy + R, r);
+        ctx.arcTo(cx + R, cy + R, cx - R, cy + R, r);
+        ctx.arcTo(cx - R, cy + R, cx - R, cy - R, r);
+        ctx.arcTo(cx - R, cy - R, cx + R, cy - R, r);
+        ctx.closePath();
+      }
+      ctx.clip();
+      ctx.drawImage(tile, 0, 0, tw, th, cx - R, cy - R, 2 * R, 2 * R);
+      ctx.restore();
+    }
+  }
+  return out;
+}
+
+// Мозаика на гекс-решётке: один гексагон (радиус s), внутри — фото в гексагоне поменьше.
+function buildMosaicHex(tile, W, H, center, s) {
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const ctx = out.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  const r = s * (1 - mosaicGapFrac());
+  const fill = mosaicGapFill();
+  const hexPath = (rad) => {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) { const p = vertex(center, i, rad); if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); }
+    ctx.closePath();
+  };
+  if (fill) { ctx.fillStyle = fill; hexPath(s + 0.6); ctx.fill(); }
+  ctx.save();
+  hexPath(r);
+  ctx.clip();
+  ctx.drawImage(tile, 0, 0, tile.width, tile.height, center.x - r, center.y - r, 2 * r, 2 * r);
+  ctx.restore();
+  return out;
 }
 
 // Делает любой квадрат бесшовным: два прохода (по X, потом по Y) с кроссфейдом со сдвинутой на 50% копией.
@@ -1756,7 +2083,7 @@ function drawThumb() {
   const tileCanvas = buildTileCanvas(Math.max(8, Math.min(S, 256)), workingImg);
   const c = { x: S / 2, y: S / 2 };
   let el;
-  if (mode === 'truchet' || mode === 'moire' || mode === 'voronoi') {
+  if (isFullCanvasMode(mode)) {
     el = buildPatternElement(mode, tileCanvas, 64, 64, { x: 32, y: 32 }, S);
   } else if (isHexMode(mode)) {
     const boxW = Math.ceil(S * Math.sqrt(3) * 1.1);
@@ -1784,7 +2111,7 @@ function drawPatternPreview() {
     const tile = buildTileCanvas(24, workingImg);
     const c = { x: 12, y: 12 };
     let el;
-    if (mode === 'truchet' || mode === 'moire' || mode === 'voronoi') {
+    if (isFullCanvasMode(mode)) {
       el = buildPatternElement(mode, tile, 60, 60, { x: 30, y: 30 }, 24);
     } else if (isHexMode(mode)) {
       const boxW = Math.ceil(24 * Math.sqrt(3) * 1.1);
@@ -1828,7 +2155,7 @@ function paintPattern(ctx, W, H, mode, tile, overrideNX, overrideNY) {
     return;
   }
 
-  if (mode === 'truchet' || mode === 'moire' || mode === 'voronoi') {
+  if (isFullCanvasMode(mode)) {
     const el = buildPatternElement(mode, tile, W, H, { x: W/2, y: H/2 }, S);
     ctx.drawImage(el, 0, 0);
     return;
@@ -1893,6 +2220,7 @@ function draw() {
   try {
     paintPattern(off.getContext('2d'), e.w, e.h, mode, tileE, e.nX, e.nY);
     applyWave(off, e.nX, e.nY);
+    applyVariation(off, e.nX, e.nY);
   } finally {
     S = savedS;
   }
@@ -1991,7 +2319,7 @@ function buildFinalCanvas() {
     workingImg = sourceImg;
     viewCenter = { x: oldCenter.x * sc, y: oldCenter.y * sc };
     // hex/truchet/moire/voronoi строят сетку прямо из S — там масштабировать S нельзя
-    const exactS = (isHexMode(mode) || ['truchet','moire','voronoi'].includes(mode));
+    const exactS = (isHexMode(mode) || isFullCanvasMode(mode));
     let Sbig = exactS ? e.s : e.s * sc;
     if (Sbig > MAX_TILE_SIDE) Sbig = MAX_TILE_SIDE;
     S = Sbig;
@@ -2013,6 +2341,7 @@ function buildFinalCanvas() {
 
     paintPattern(ctx, e.w, e.h, mode, tileFromOriginal, e.nX, e.nY);
     applyWave(c, e.nX, e.nY);
+    if (!isSingleExport()) applyVariation(c, e.nX, e.nY);
   } finally {
     workingImg = oldWorking;
     viewCenter = oldCenter;
@@ -2104,9 +2433,105 @@ if (!(window.CSS && CSS.supports && CSS.supports('height', '100dvh'))) {
   window.addEventListener('orientationchange', setAppH);
 }
 
+// ============ ССЫЛКА С НАСТРОЙКАМИ (#hash) ============
+// В ссылке только настройки (фото в неё не попадает). В адресе пишутся лишь значения, отличающиеся от умолчаний.
+const HASH_FIELDS = [
+  ['m', patternSelect, 'select'], ['bg', bgModeSelect, 'select'], ['bgc', bgColorPicker, 'color'],
+  ['sc', scaleSlider, 'num'], ['rot', rotSlider, 'num'], ['cnt', countSlider, 'num'],
+  ['wv', waveSlider, 'num'], ['vr', varSlider, 'num'],
+  ['cb', cBright, 'num'], ['cc', cContrast, 'num'], ['cs', cSat, 'num'], ['ch', cHue, 'num'], ['ct', cTone, 'select'],
+  ['mn', mandalaN, 'num'], ['mt', mandalaTwist, 'num'], ['mg', mosaicGapSlider, 'num'], ['mc', mosaicGapColor, 'color'],
+  ['ex', exportSizeSelect, 'select'], ['el', exportLayoutSelect, 'select'], ['ef', exportFormatSelect, 'select']
+];
+const HASH_DEFAULTS = {};
+HASH_FIELDS.forEach(([k, el]) => { HASH_DEFAULTS[k] = el.value; });
+let lastHash = null;
+
+function serializeState() {
+  const p = new URLSearchParams();
+  HASH_FIELDS.forEach(([k, el]) => { if (el.value !== HASH_DEFAULTS[k]) p.set(k, el.value); });
+  if (mosaicGapClear.checked) p.set('mx', '1');
+  if (varSeed !== 12345) p.set('sd', String(varSeed));
+  let fx = null, fy = null;
+  if (workingImg) { fx = viewCenter.x / workingImg.width; fy = viewCenter.y / workingImg.height; }
+  else if (pendingView) { fx = pendingView.fx; fy = pendingView.fy; }
+  if (fx !== null && (Math.abs(fx - 0.5) > 0.0005 || Math.abs(fy - 0.5) > 0.0005)) {
+    p.set('vx', fx.toFixed(4)); p.set('vy', fy.toFixed(4));
+  }
+  return p.toString();
+}
+
+function applyHashState() {
+  const p = new URLSearchParams(location.hash.replace(/^#/, ''));
+  HASH_FIELDS.forEach(([k, el, type]) => {
+    let v = p.has(k) ? p.get(k) : HASH_DEFAULTS[k];
+    if (type === 'select') {
+      if (![...el.options].some(o => o.value === v)) v = HASH_DEFAULTS[k];
+    } else if (type === 'color') {
+      if (!/^#[0-9a-fA-F]{6}$/.test(v)) v = HASH_DEFAULTS[k];
+    } else {
+      const n = parseFloat(v);
+      if (!isFinite(n)) v = HASH_DEFAULTS[k];
+      else {
+        const lo = el.min !== '' ? parseFloat(el.min) : -Infinity, hi = el.max !== '' ? parseFloat(el.max) : Infinity;
+        v = String(Math.min(hi, Math.max(lo, n)));
+      }
+    }
+    if (el.value === v) return;
+    el.value = v;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  const clear = p.get('mx') === '1';
+  if (mosaicGapClear.checked !== clear) { mosaicGapClear.checked = clear; mosaicGapClear.dispatchEvent(new Event('input', { bubbles: true })); }
+  const sd = parseInt(p.get('sd'), 10);
+  varSeed = isFinite(sd) ? sd : 12345;
+  const fx = parseFloat(p.get('vx')), fy = parseFloat(p.get('vy'));
+  const hasView = isFinite(fx) && isFinite(fy);
+  if (workingImg) {
+    viewCenter = hasView
+      ? { x: Math.min(1, Math.max(0, fx)) * workingImg.width, y: Math.min(1, Math.max(0, fy)) * workingImg.height }
+      : { x: workingImg.width / 2, y: workingImg.height / 2 };
+  } else {
+    pendingView = hasView ? { fx, fy } : null;
+  }
+  S = sliderToS(parseFloat(countSlider.value));
+  refreshColorLabels();
+  updateModeControls();
+  updateBgHint();
+  updatePeriodInfo();
+  updateExportLine();
+  invalidateCaches();
+  if (workingImg) render();
+}
+
+function syncHash() {
+  const s = serializeState();
+  if (s === lastHash) return;
+  lastHash = s;
+  try { history.replaceState(null, '', s ? '#' + s : location.pathname + location.search); } catch (e) { /* file:// и т.п. */ }
+}
+setInterval(syncHash, 600);
+window.addEventListener('hashchange', () => {
+  if (location.hash.replace(/^#/, '') === lastHash) return;
+  applyHashState();
+  lastHash = serializeState();
+});
+document.getElementById('linkBtn').addEventListener('click', async () => {
+  syncHash();
+  try {
+    await navigator.clipboard.writeText(location.href);
+    showToast('🔗 Link copied (settings only, not the photo)');
+  } catch (e) {
+    prompt('Copy this link:', location.href);
+  }
+});
+
 // ============ ИНИЦИАЛИЗАЦИЯ ============
+applyHashState();
 S = sliderToS(parseFloat(countSlider.value));
 currentModeVal = patternSelect.value;
+updateModeControls();
 updatePeriodInfo();
 updateExportLine();
 updateBgHint();
